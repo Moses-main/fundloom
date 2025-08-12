@@ -3,25 +3,31 @@ import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/Header";
 import HomePage from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
+import { AppProvider } from "./context/AppContext";
 // import CampaignsPage from "./pages/CampaignsPage";
 // import CreateCampaignPage from "./pages/CreateCampaignPage";
 import ForgotWalletPage from "./pages/ForgotWallet";
 import DashboardPage from "./pages/Dashboard";
 
+// testing with the entire application
+import Entire from "./entireApp";
+
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="fundflow-theme">
-      <div className="min-h-screen bg-background">
-        <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/auth" element={<AuthPage />} />
-          {/* <Route path="/campaigns" element={<CampaignsPage />} /> */}
-          {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
-        </Routes>
-      </div>
+      <AppProvider>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            {/* <Route path="/campaigns" element={<CampaignsPage />} /> */}
+            {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
+            <Route path="/dashboard" element={<Entire />} />
+            <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
+          </Routes>
+        </div>
+      </AppProvider>
     </ThemeProvider>
   );
 }

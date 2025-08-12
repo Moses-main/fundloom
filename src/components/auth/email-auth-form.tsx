@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
 import * as z from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -46,6 +47,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const navigate = useNavigate();
 
   const form = useForm<LoginFormData | SignupFormData>({
     resolver: zodResolver(mode === "login" ? loginSchema : signupSchema),
@@ -61,6 +63,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       // TODO: Implement actual authentication logic (email/password)
       console.log(`${mode} with email:`, data);
       await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+      navigate("/dashboard");
     } catch (error) {
       console.error("Authentication error:", error);
     } finally {
@@ -75,6 +78,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
       // Example: window.location.href = `/api/oauth/google?mode=${mode}`
       console.log(`${mode} with Google OAuth`);
       await new Promise((resolve) => setTimeout(resolve, 1200));
+      navigate("/dashboard");
     } catch (error) {
       console.error("Google OAuth error:", error);
     } finally {

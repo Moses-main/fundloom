@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useNavigate } from "react-router-dom";
+
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
@@ -51,6 +53,8 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+
   const connectWallet = async (walletId: string) => {
     setIsConnecting(walletId);
     try {
@@ -58,6 +62,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       console.log(`Connecting to ${walletId}`);
       await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate connection
       setConnectedWallet(walletId);
+      navigate("/dashboard");
     } catch (error) {
       console.error("Wallet connection error:", error);
     } finally {
@@ -67,6 +72,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
 
   const disconnectWallet = () => {
     setConnectedWallet(null);
+    navigate("/");
   };
 
   if (connectedWallet) {
