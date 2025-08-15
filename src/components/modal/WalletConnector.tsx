@@ -7,9 +7,12 @@ import {
   useDisconnect,
 } from "@starknet-react/core";
 import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
+import { clearAuth } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 export function WalletConnectorModal() {
   const { disconnect } = useDisconnect();
+  const navigate = useNavigate();
 
   const { connect, connectors } = useConnect();
   const { starknetkitConnectModal } = useStarknetkitConnectModal({
@@ -42,7 +45,11 @@ export function WalletConnectorModal() {
         Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
       </div>
       <button
-        onClick={() => disconnect()}
+        onClick={() => {
+          try { disconnect(); } catch {}
+          clearAuth();
+          navigate("/");
+        }}
         className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
       >
         Disconnect

@@ -39,9 +39,13 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<ProfileData>({
     name: initialUser?.name || initialUser?.fullname || "John Doe",
     email: initialUser?.email || "john.doe@example.com",
-    bio: initialUser?.profile?.bio || "Software developer passionate about blockchain and web3.",
+    bio:
+      initialUser?.profile?.bio ||
+      "Software developer passionate about blockchain and web3.",
   });
-  const [lastLogin, setLastLogin] = useState<string | null>(initialUser?.lastLogin || null);
+  const [lastLogin, setLastLogin] = useState<string | null>(
+    initialUser?.lastLogin || null
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [prefEmailNotif, setPrefEmailNotif] = useState(true);
@@ -102,7 +106,9 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className="text-xl font-semibold">{profile.name}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">{profile.email}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {profile.email}
+              </div>
             </div>
             {!isEditing && (
               <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
@@ -136,7 +142,9 @@ const ProfilePage: React.FC = () => {
             </div>
             <div>
               <div className="text-sm text-gray-500">Last Login</div>
-              <div className="text-lg font-semibold">{lastLogin ? new Date(lastLogin).toLocaleString() : "—"}</div>
+              <div className="text-lg font-semibold">
+                {lastLogin ? new Date(lastLogin).toLocaleString() : "—"}
+              </div>
             </div>
           </div>
         </div>
@@ -202,7 +210,9 @@ const ProfilePage: React.FC = () => {
                 </Button>
               </>
             ) : (
-              <div className="text-sm text-gray-500">Use the Edit button above to update your details.</div>
+              <div className="text-sm text-gray-500">
+                Use the Edit button above to update your details.
+              </div>
             )}
           </div>
         </div>
@@ -216,7 +226,9 @@ const ProfilePage: React.FC = () => {
             <label className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Email notifications</div>
-                <div className="text-sm text-gray-500">Receive updates about campaigns and donations.</div>
+                <div className="text-sm text-gray-500">
+                  Receive updates about campaigns and donations.
+                </div>
               </div>
               <input
                 type="checkbox"
@@ -230,7 +242,10 @@ const ProfilePage: React.FC = () => {
                 <Moon className="h-4 w-4" />
                 <div>
                   <div className="font-medium">Dark mode</div>
-                  <div className="text-sm text-gray-500">Toggle site theme preference. Current: {mounted ? resolvedTheme : "..."}</div>
+                  <div className="text-sm text-gray-500">
+                    Toggle site theme preference. Current:{" "}
+                    {mounted ? resolvedTheme : "..."}
+                  </div>
                 </div>
               </div>
               <input
@@ -242,7 +257,14 @@ const ProfilePage: React.FC = () => {
             </label>
           </div>
           <div className="mt-4">
-            <Button onClick={() => console.log("Saved preferences", { theme: resolvedTheme, prefEmailNotif })}>
+            <Button
+              onClick={() =>
+                console.log("Saved preferences", {
+                  theme: resolvedTheme,
+                  prefEmailNotif,
+                })
+              }
+            >
               Save Preferences
             </Button>
           </div>
@@ -260,7 +282,12 @@ const ProfilePage: React.FC = () => {
                 {googleConnected ? "Connected via OAuth" : "Not connected"}
               </div>
             </div>
-            <Button variant="secondary" onClick={() => console.log("Manage Google connection")}>Manage</Button>
+            <Button
+              variant="secondary"
+              onClick={() => console.log("Manage Google connection")}
+            >
+              Manage
+            </Button>
           </div>
         </div>
 
@@ -275,16 +302,18 @@ const ProfilePage: React.FC = () => {
             <Input type="password" placeholder="Confirm new password" />
           </div>
           <div className="mt-4">
-            <Button onClick={() => console.log("Change password submitted")}>Update Password</Button>
+            <Button onClick={() => console.log("Change password submitted")}>
+              Update Password
+            </Button>
           </div>
           <div className="mt-6 border-t pt-6">
-            <h3 className="font-semibold mb-2">Danger zone</h3>
+            <h3 className="font-semibold  mb-2">Danger zone</h3>
             <Button
               variant="destructive"
               onClick={() => console.warn("Delete account clicked")}
-              className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
+              className="bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
             >
-              <Trash2 className="h-4 w-4" /> Delete Account
+              <Trash2 className="h-4 w-4 text-white" /> Delete Account
             </Button>
           </div>
         </div>

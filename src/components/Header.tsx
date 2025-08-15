@@ -1,12 +1,14 @@
 // // "use client";
 // import "../global.css";
 import "../App.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // React Router Link
 import { Button } from "../components/ui/Button";
 import { ThemeToggle } from "../components/theme-toggle";
-import { Menu, X, Zap, Wallet, CheckCircle } from "lucide-react";
+import { Menu, X, Zap, CheckCircle } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { useAccount, useDisconnect } from "@starknet-react/core";
+import { WalletConnectorModal } from "../components/modal/WalletConnector";
 import { clearAuth } from "../lib/api";
 
 export const Header: React.FC = () => {
@@ -14,14 +16,29 @@ export const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith("/dashboard");
-  const {
-    activeTab,
-    setActiveTab,
-    walletConnected,
-    connectWallet,
-    disconnectWallet,
-    userAddress,
-  } = useAppContext();
+  const { activeTab, setActiveTab } = useAppContext();
+  // Use StarkNet account state instead of mock wallet state
+  const { address: starknetAddress } = useAccount();
+  const { disconnect: starknetDisconnect } = useDisconnect();
+  // Detect EVM wallet (MetaMask) connection
+  const [evmAddress, setEvmAddress] = useState<string | null>(null);
+  useEffect(() => {
+    const eth = (window as any)?.ethereum;
+    if (!eth) return;
+    const update = async () => {
+      try {
+        const accounts: string[] = await eth.request?.({ method: "eth_accounts" });
+        setEvmAddress(accounts && accounts.length ? accounts[0] : null);
+      } catch {}
+    };
+    update();
+    const handler = (accounts: string[]) => setEvmAddress(accounts && accounts.length ? accounts[0] : null);
+    eth.on?.("accountsChanged", handler);
+    return () => {
+      eth.removeListener?.("accountsChanged", handler);
+    };
+  }, []);
+  const walletConnected = useMemo(() => !!starknetAddress || !!evmAddress, [starknetAddress, evmAddress]);
 
   // Determine if user is authenticated
   const [isAuthed, setIsAuthed] = useState(false);
@@ -44,6 +61,22 @@ export const Header: React.FC = () => {
     // Navigate home and close menus
     navigate("/");
     setIsMenuOpen(false);
+  };
+
+  const handleDisconnectWallet = async () => {
+    try {
+      if (starknetAddress) {
+        await starknetDisconnect();
+      }
+      if (evmAddress) {
+        // Dapps cannot programmatically disconnect MetaMask; clear local state
+        setEvmAddress(null);
+      }
+    } catch (e) {
+      // no-op; ensure logout below still runs
+    } finally {
+      handleLogout();
+    }
   };
 
   return (
@@ -110,35 +143,28 @@ export const Header: React.FC = () => {
           <ThemeToggle />
           <div className="hidden md:flex items-center space-x-2">
             {isDashboard ? (
-              walletConnected ? (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {walletConnected && (
                   <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     <span className="text-sm font-medium text-foreground">
-                      {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
+                      {(starknetAddress || evmAddress)?.slice(0, 6)}...{(starknetAddress || evmAddress)?.slice(-4)}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={disconnectWallet}>
+                )}
+                {walletConnected && (
+                  <Button variant="ghost" size="sm" onClick={handleDisconnectWallet}>
                     Disconnect
                   </Button>
-                  {hasJwt && (
-                    <Button variant="outline" size="sm" onClick={handleLogout}>
-                      Logout
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={connectWallet}>
-                    <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
+                )}
+                {/* Wallet modal handles connect/disconnect; hide when authenticated */}
+                {!isAuthed && <WalletConnectorModal />}
+                {hasJwt && (
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                    Logout
                   </Button>
-                  {hasJwt && (
-                    <Button variant="outline" size="sm" onClick={handleLogout}>
-                      Logout
-                    </Button>
-                  )}
-                </div>
-              )
+                )}
+              </div>
             ) : (
               <>
                 {isAuthed ? (
@@ -234,15 +260,10 @@ export const Header: React.FC = () => {
                     </button>
                   ))}
                   <div className="pt-2 grid grid-cols-1 gap-2">
-                    {walletConnected ? (
-                      <Button variant="outline" className="w-full" onClick={() => { disconnectWallet(); setIsMenuOpen(false); }}>
-                        Disconnect ({userAddress.slice(0, 6)}...{userAddress.slice(-4)})
-                      </Button>
-                    ) : (
-                      <Button className="w-full" onClick={() => { connectWallet(); setIsMenuOpen(false); }}>
-                        <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
-                      </Button>
-                    )}
+                    <div className="w-full">
+                      {/* Reuse the same modal for mobile; hide when authenticated */}
+                      {!isAuthed && <WalletConnectorModal />}
+                    </div>
                   </div>
                 </>
               ) : (
@@ -286,8 +307,13 @@ export const Header: React.FC = () => {
                             Logout
                           </Button>
                         ) : (
-                          <Button variant="outline" className="w-full" onClick={connectWallet}>
-                            Connect Wallet
+                          <div className="w-full">
+                            {!isAuthed && <WalletConnectorModal />}
+                          </div>
+                        )}
+                        {walletConnected && (
+                          <Button variant="ghost" className="w-full" onClick={() => { setIsMenuOpen(false); handleDisconnectWallet(); }}>
+                            Disconnect Wallet
                           </Button>
                         )}
                       </>

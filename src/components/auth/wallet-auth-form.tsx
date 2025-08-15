@@ -1,19 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import { WalletConnectorModal } from "@/components/modal/WalletConnector";
+import { useAccount as useStarknetAccount } from "@starknet-react/core";
 
 interface WalletOption {
   id: string;
   name: string;
   icon: string;
   description: string;
-  installed?: boolean;
   popular?: boolean;
 }
 
@@ -29,19 +30,19 @@ const walletOptions: WalletOption[] = [
     id: "walletconnect",
     name: "WalletConnect",
     icon: "🔗",
-    description: "Connect with WalletConnect protocol",
+    description: "Connect with WalletConnect protocol (coming soon)",
   },
   {
     id: "coinbase",
     name: "Coinbase Wallet",
     icon: "🔵",
-    description: "Connect using Coinbase Wallet",
+    description: "Connect using Coinbase Wallet (coming soon)",
   },
   {
-    id: "phantom",
-    name: "Phantom",
-    icon: "👻",
-    description: "Connect using Phantom wallet",
+    id: "starknet",
+    name: "StarkNet Wallets",
+    icon: "⭐",
+    description: "Connect ArgentX or Braavos via modal",
   },
 ];
 
@@ -52,17 +53,49 @@ interface WalletAuthFormProps {
 export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [evmAddress, setEvmAddress] = useState<string | null>(null);
+  const { address: starknetAddress } = useStarknetAccount();
 
   const navigate = useNavigate();
+
+  // If StarkNet is connected via modal, reflect it here
+  useEffect(() => {
+    if (starknetAddress) {
+      setConnectedWallet("starknet");
+      // Seamless onboarding: go to dashboard when connected
+      navigate("/dashboard");
+    }
+  }, [starknetAddress]);
+
+  const isConnected = useMemo(
+    () => !!evmAddress || !!starknetAddress,
+    [evmAddress, starknetAddress]
+  );
 
   const connectWallet = async (walletId: string) => {
     setIsConnecting(walletId);
     try {
-      // TODO: Implement actual wallet connection logic
-      console.log(`Connecting to ${walletId}`);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate connection
-      setConnectedWallet(walletId);
-      navigate("/dashboard");
+      if (walletId === "metamask") {
+        const eth = (window as any).ethereum;
+        if (!eth || !eth.request) {
+          alert("MetaMask not detected. Please install MetaMask and try again.");
+          return;
+        }
+        const accounts: string[] = await eth.request({
+          method: "eth_requestAccounts",
+        });
+        if (accounts && accounts.length > 0) {
+          setEvmAddress(accounts[0]);
+          setConnectedWallet("metamask");
+          navigate("/dashboard");
+        }
+        return;
+      }
+      if (walletId === "starknet") {
+        // Render modal-driven connect button below; here we no-op and let the user click modal
+        return;
+      }
+      alert("This wallet option is coming soon.");
     } catch (error) {
       console.error("Wallet connection error:", error);
     } finally {
@@ -72,11 +105,14 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
 
   const disconnectWallet = () => {
     setConnectedWallet(null);
+    setEvmAddress(null);
     navigate("/");
   };
 
-  if (connectedWallet) {
-    const wallet = walletOptions.find((w) => w.id === connectedWallet);
+  if (isConnected) {
+    const wallet = walletOptions.find((w) => w.id === connectedWallet) || {
+      name: connectedWallet,
+    } as any;
     return (
       <div className="space-y-4">
         <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
@@ -88,7 +124,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
                   Wallet Connected
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  {wallet?.name} • 0x1234...5678
+                  {wallet?.name} • {(evmAddress || starknetAddress)?.slice(0,6)}...{(evmAddress || starknetAddress)?.slice(-4)}
                 </p>
               </div>
             </div>
@@ -161,6 +197,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
                   <ExternalLink className="h-4 w-4 text-gray-400" />
                 )}
               </div>
+              {wallet.id === "starknet" && (
+                <div className="mt-3">
+                  <WalletConnectorModal />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
