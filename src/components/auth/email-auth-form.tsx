@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/Form";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
+import { registerUser, loginUser, setAuth } from "@/lib/api";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -60,12 +61,20 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const onSubmit = async (data: LoginFormData | SignupFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual authentication logic (email/password)
-      console.log(`${mode} with email:`, data);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+      if (mode === "signup") {
+        const { name, email, password } = data as SignupFormData;
+        const auth = await registerUser({ name, email, password });
+        setAuth(auth);
+      } else {
+        const { email, password } = data as LoginFormData;
+        const auth = await loginUser({ email, password });
+        setAuth(auth);
+      }
       navigate("/dashboard");
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Authentication failed";
       console.error("Authentication error:", error);
+      alert(msg);
     } finally {
       setIsLoading(false);
     }

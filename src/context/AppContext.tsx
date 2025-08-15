@@ -315,6 +315,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Read initial tab from URL when on /dashboard
+  useEffect(() => {
+    if (window.location.pathname.startsWith("/dashboard")) {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") as AppContextType["activeTab"] | null;
+      if (tab && ["campaigns", "donate", "charity", "profile"].includes(tab)) {
+        setActiveTab(tab);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep URL in sync with activeTab on /dashboard
+  useEffect(() => {
+    if (window.location.pathname.startsWith("/dashboard")) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", activeTab);
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [activeTab]);
+
   // leaderboard derived
   const leaderboard = useMemo(() => {
     const sums: Record<string, { name: string; total: number; count: number }> =

@@ -112,8 +112,10 @@
 
 // src/pages/ProfilePage.tsx
 import React from "react";
+import { Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { DollarSign, Clock, CreditCard } from "lucide-react";
+import { DollarSign, Clock, CreditCard, User } from "lucide-react";
+import { Button } from "../components/ui/Button";
 
 const ProfilePage: React.FC = () => {
   const {
@@ -123,25 +125,62 @@ const ProfilePage: React.FC = () => {
     campaigns,
     formatAmount,
     formatDate,
+    connectWallet,
   } = useAppContext();
 
-  if (!walletConnected)
+  // Determine if user has JWT session (email/password auth)
+  let authedUser: { fullname?: string; name?: string; email?: string } | null = null;
+  let hasJwt = false;
+  try {
+    const token = localStorage.getItem("auth_token");
+    const rawUser = localStorage.getItem("auth_user");
+    if (token && rawUser) {
+      hasJwt = true;
+      authedUser = JSON.parse(rawUser);
+    }
+  } catch {}
+
+  if (!walletConnected && !hasJwt) {
     return (
-      <div className="text-center py-12">
-        Please connect your wallet to view your donation history.
+      <div className="text-center py-16 space-y-4">
+        <p className="text-lg">Please sign in or connect your wallet to view your profile.</p>
+        <div className="flex items-center justify-center gap-3">
+          <Button asChild>
+            <Link to="/auth">Sign In</Link>
+          </Button>
+          <Button variant="outline" onClick={connectWallet}>Connect Wallet</Button>
+        </div>
       </div>
     );
+  }
 
-  const myDonations = donations.filter((d) => d.donor_address === userAddress);
+  const myDonations = walletConnected
+    ? donations.filter((d) => d.donor_address === userAddress)
+    : [];
 
   return (
     <div className="space-y-6">
+      {/* Profile summary */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+            <User className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {authedUser?.fullname || authedUser?.name || (walletConnected ? userAddress : "User")}
+            </h2>
+            <p className="text-sm text-gray-600">{authedUser?.email || (walletConnected ? `${userAddress.slice(0,6)}...${userAddress.slice(-4)}` : "")}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           Your Donation History
         </h2>
         <div className="space-y-4">
-          {myDonations.map((d) => {
+          {walletConnected && myDonations.map((d) => {
             const campaign = campaigns.find((c) => c.id === d.campaign_id);
             return (
               <div
@@ -177,10 +216,13 @@ const ProfilePage: React.FC = () => {
               </div>
             );
           })}
-          {myDonations.length === 0 && (
+          {!walletConnected && (
             <div className="text-sm text-gray-500">
-              You have not made any donations yet.
+              Connect your wallet to see your on-chain donation history.
             </div>
+          )}
+          {walletConnected && myDonations.length === 0 && (
+            <div className="text-sm text-gray-500">You have not made any donations yet.</div>
           )}
         </div>
       </div>

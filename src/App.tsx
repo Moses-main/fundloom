@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/Header";
 import HomePage from "./pages/Home";
@@ -27,6 +27,7 @@ function App() {
             <Route path="/campaigns" element={<CampaignsPage />} />
             {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/profile" element={<Navigate to="/dashboard?tab=profile" replace />} />
             <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
           </Routes>
         </div>

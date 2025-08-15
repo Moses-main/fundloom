@@ -1,16 +1,18 @@
 // // "use client";
 // import "../global.css";
 import "../App.css";
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom"; // React Router Link
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // React Router Link
 import { Button } from "../components/ui/Button";
 import { ThemeToggle } from "../components/theme-toggle";
 import { Menu, X, Zap, Wallet, CheckCircle } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { clearAuth } from "../lib/api";
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith("/dashboard");
   const {
     activeTab,
@@ -20,6 +22,29 @@ export const Header: React.FC = () => {
     disconnectWallet,
     userAddress,
   } = useAppContext();
+
+  // Determine if user is authenticated
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [hasJwt, setHasJwt] = useState(false);
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const tokenPresent = !!token;
+      setHasJwt(tokenPresent);
+      setIsAuthed(tokenPresent || walletConnected);
+    } catch {
+      setIsAuthed(walletConnected);
+    }
+  }, [walletConnected, location.pathname]);
+
+  const handleLogout = () => {
+    clearAuth();
+    setHasJwt(false);
+    setIsAuthed(!!walletConnected);
+    // Navigate home and close menus
+    navigate("/");
+    setIsMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -96,25 +121,52 @@ export const Header: React.FC = () => {
                   <Button variant="ghost" size="sm" onClick={disconnectWallet}>
                     Disconnect
                   </Button>
+                  {hasJwt && (
+                    <Button variant="outline" size="sm" onClick={handleLogout}>
+                      Logout
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <Button size="sm" onClick={connectWallet}>
-                  <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={connectWallet}>
+                    <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
+                  </Button>
+                  {hasJwt && (
+                    <Button variant="outline" size="sm" onClick={handleLogout}>
+                      Logout
+                    </Button>
+                  )}
+                </div>
               )
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link
-                    to="/auth"
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link to="/auth?mode=signup">Create Campaign</Link>
-                </Button>
+                {isAuthed ? (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/profile">Profile</Link>
+                    </Button>
+                    {hasJwt && (
+                      <Button variant="ghost" size="sm" onClick={handleLogout}>
+                        Logout
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link
+                        to="/auth"
+                        className="text-sm font-medium hover:text-primary transition-colors"
+                      >
+                        Sign In
+                      </Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link to="/auth?mode=signup">Create Campaign</Link>
+                    </Button>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -224,14 +276,33 @@ export const Header: React.FC = () => {
                     Pricing
                   </a>
                   <div className="pt-2 grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                        Sign In
-                      </Link>
-                    </Button>
-                    <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
-                      <Link to="/auth?mode=signup">Create</Link>
-                    </Button>
+                    {isAuthed ? (
+                      <>
+                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
+                          <Link to="/profile">Profile</Link>
+                        </Button>
+                        {hasJwt ? (
+                          <Button variant="outline" className="w-full" onClick={handleLogout}>
+                            Logout
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="w-full" onClick={connectWallet}>
+                            Connect Wallet
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                            Sign In
+                          </Link>
+                        </Button>
+                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
+                          <Link to="/auth?mode=signup">Create</Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </>
               )}
