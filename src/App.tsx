@@ -3,6 +3,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/Header";
 import HomePage from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
+import OAuthCallbackPage from "./pages/OAuthCallback";
 import { AppProvider } from "./context/AppContext";
 // import CampaignsPage from "./pages/CampaignsPage";
 // import CreateCampaignPage from "./pages/CreateCampaignPage";
@@ -24,6 +25,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
             <Route path="/campaigns" element={<CampaignsPage />} />
             {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
             <Route path="/dashboard" element={<DashboardPage />} />

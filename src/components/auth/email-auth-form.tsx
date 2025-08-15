@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/Form";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
-import { registerUser, loginUser, setAuth } from "@/lib/api";
+import { registerUser, loginUser, setAuth, API_BASE_URL } from "@/lib/api";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -83,11 +83,9 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const handleGoogleAuth = async () => {
     setIsOAuthLoading(true);
     try {
-      // TODO: Implement Google OAuth redirect/start flow
-      // Example: window.location.href = `/api/oauth/google?mode=${mode}`
-      console.log(`${mode} with Google OAuth`);
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      navigate("/dashboard");
+      // Start Google OAuth via backend (Passport)
+      // Backend will redirect back to /auth/callback with token & user
+      window.location.href = `${API_BASE_URL}/auth/google`;
     } catch (error) {
       console.error("Google OAuth error:", error);
     } finally {

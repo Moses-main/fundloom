@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '../ui/Button';
+import { API_BASE_URL } from '@/lib/api';
 
 interface GoogleAuthButtonProps {
   onSuccess: (user: any, token: string) => void;
@@ -15,15 +16,13 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   disabled = false
 }) => {
   const handleGoogleAuth = () => {
-    // Option 1: Redirect to backend OAuth endpoint
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-    window.location.href = `${backendUrl}/api/v1/auth/google`;
+    // Redirect to backend OAuth endpoint
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   const handleGoogleTokenAuth = async (googleToken: string) => {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-      const response = await fetch(`${backendUrl}/api/v1/auth/google/verify`, {
+      const response = await fetch(`${API_BASE_URL}/auth/google/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,7 +47,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
     const initializeGoogleSignIn = () => {
       if (typeof window !== 'undefined' && window.google) {
         window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          client_id: (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID,
           callback: (response: any) => {
             if (response.credential) {
               handleGoogleTokenAuth(response.credential);
