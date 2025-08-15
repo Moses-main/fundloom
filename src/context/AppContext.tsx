@@ -1,165 +1,3 @@
-// import React, { createContext, useContext, useState, ReactNode } from "react";
-
-// export type Campaign = {
-//   id: string;
-//   title: string;
-//   description: string;
-//   category: string;
-//   targetAmount: number;
-//   raisedAmount: number;
-//   imageUrl: string;
-//   owner: string;
-// };
-
-// export type Donation = {
-//   id: string;
-//   campaignId: string;
-//   donor: string;
-//   amount: number;
-//   date: string;
-// };
-
-// type Theme = "light" | "dark";
-
-// type AppContextType = {
-//   activeTab: "campaigns" | "donate" | "profile";
-//   setActiveTab: (tab: AppContextType["activeTab"]) => void;
-//   walletConnected: boolean;
-//   walletAddress: string | null;
-//   connectWallet: () => void;
-//   disconnectWallet: () => void;
-//   theme: Theme;
-//   toggleTheme: () => void;
-
-//   campaigns: Campaign[];
-//   addCampaign: (campaign: Campaign) => void;
-//   selectedCampaign: Campaign | null;
-//   setSelectedCampaign: (c: Campaign | null) => void;
-
-//   donations: Donation[];
-//   addDonation: (donation: Donation) => void;
-
-//   showCreateModal: boolean;
-//   setShowCreateModal: (show: boolean) => void;
-
-//   showDonationModal: boolean;
-//   setShowDonationModal: (show: boolean) => void;
-
-//   showThankYouModal: boolean;
-//   setShowThankYouModal: (show: boolean) => void;
-// };
-
-// const AppContext = createContext<AppContextType | undefined>(undefined);
-
-// export const useAppContext = () => {
-//   const context = useContext(AppContext);
-//   if (!context)
-//     throw new Error("useAppContext must be used within AppProvider");
-//   return context;
-// };
-
-// export const AppProvider = ({ children }: { children: ReactNode }) => {
-//   const [activeTab, setActiveTab] =
-//     useState<AppContextType["activeTab"]>("campaigns");
-//   const [walletConnected, setWalletConnected] = useState(false);
-//   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-//   const [theme, setTheme] = useState<Theme>("light");
-
-//   // Dummy campaigns
-//   const [campaigns, setCampaigns] = useState<Campaign[]>([
-//     {
-//       id: "1",
-//       title: "Save the Rainforest",
-//       description: "Help us protect the rainforest ecosystem",
-//       category: "Environment",
-//       targetAmount: 10000,
-//       raisedAmount: 4500,
-//       imageUrl: "https://placekitten.com/400/250",
-//       owner: "0x123...",
-//     },
-//     {
-//       id: "2",
-//       title: "Clean Ocean Initiative",
-//       description: "Reduce ocean pollution by supporting cleanup",
-//       category: "Environment",
-//       targetAmount: 20000,
-//       raisedAmount: 15000,
-//       imageUrl: "https://placekitten.com/401/251",
-//       owner: "0x456...",
-//     },
-//   ]);
-//   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-//     null
-//   );
-
-//   // Dummy donations
-//   const [donations, setDonations] = useState<Donation[]>([
-//     {
-//       id: "d1",
-//       campaignId: "1",
-//       donor: "0xabc...",
-//       amount: 100,
-//       date: new Date().toISOString(),
-//     },
-//   ]);
-
-//   const [showCreateModal, setShowCreateModal] = useState(false);
-//   const [showDonationModal, setShowDonationModal] = useState(false);
-//   const [showThankYouModal, setShowThankYouModal] = useState(false);
-
-//   const connectWallet = () => {
-//     // dummy wallet connect
-//     setWalletConnected(true);
-//     setWalletAddress("0xYourWalletAddress");
-//   };
-
-//   const disconnectWallet = () => {
-//     setWalletConnected(false);
-//     setWalletAddress(null);
-//   };
-
-//   const toggleTheme = () => {
-//     setTheme((t) => (t === "light" ? "dark" : "light"));
-//   };
-
-//   const addCampaign = (campaign: Campaign) => {
-//     setCampaigns((prev) => [...prev, campaign]);
-//   };
-
-//   const addDonation = (donation: Donation) => {
-//     setDonations((prev) => [...prev, donation]);
-//   };
-
-//   return (
-//     <AppContext.Provider
-//       value={{
-//         activeTab,
-//         setActiveTab,
-//         walletConnected,
-//         walletAddress,
-//         connectWallet,
-//         disconnectWallet,
-//         theme,
-//         toggleTheme,
-//         campaigns,
-//         addCampaign,
-//         selectedCampaign,
-//         setSelectedCampaign,
-//         donations,
-//         addDonation,
-//         showCreateModal,
-//         setShowCreateModal,
-//         showDonationModal,
-//         setShowDonationModal,
-//         showThankYouModal,
-//         setShowThankYouModal,
-//       }}
-//     >
-//       {children}
-//     </AppContext.Provider>
-//   );
-// };
-
 // src/context/AppContext.tsx
 import React, {
   createContext,
@@ -249,7 +87,7 @@ const SEED_CAMPAIGNS: Campaign[] = [
     is_active: true,
     created_at: Date.now() - 10 * 24 * 60 * 60 * 1000,
     total_donors: 127,
-    image: null,
+    image: "/students-coding.png",
     category: "Charity",
     template: "default",
     funds_used: { infrastructure: 15000, operations: 5000, admin: 2000 },
@@ -266,7 +104,7 @@ const SEED_CAMPAIGNS: Campaign[] = [
     is_active: true,
     created_at: Date.now() - 5 * 24 * 60 * 60 * 1000,
     total_donors: 89,
-    image: null,
+    image: "/students-tablets-learning.png",
     category: "Education",
     template: "impact",
     funds_used: { supplies: 4000, teachers: 2000 },
@@ -283,12 +121,26 @@ const SEED_CAMPAIGNS: Campaign[] = [
     is_active: true,
     created_at: Date.now() - 15 * 24 * 60 * 60 * 1000,
     total_donors: 203,
-    image: null,
+    image: "/vite.svg",
     category: "Health",
     template: "medical",
     funds_used: { equipment: 30000, staff: 12000 },
   },
 ];
+
+// Provide default images for campaigns that might be missing `image`
+const defaultImageFor = (c: Campaign): string | null => {
+  switch (c.id) {
+    case 1:
+      return "/students-coding.png";
+    case 2:
+      return "/students-tablets-learning.png";
+    case 3:
+      return "/vite.svg";
+    default:
+      return null;
+  }
+};
 
 const SEED_DONATIONS: Donation[] = [
   {
@@ -443,6 +295,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     localStorage.setItem(LS_KEYS.comments, JSON.stringify(comments));
   }, [comments]);
+
+  // One-time migration: backfill images for campaigns loaded from older localStorage
+  useEffect(() => {
+    let changed = false;
+    const updated = campaigns.map((c) => {
+      if (!c.image) {
+        const img = defaultImageFor(c);
+        if (img) {
+          changed = true;
+          return { ...c, image: img };
+        }
+      }
+      return c;
+    });
+    if (changed) {
+      setCampaigns(updated);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // leaderboard derived
   const leaderboard = useMemo(() => {

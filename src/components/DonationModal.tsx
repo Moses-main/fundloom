@@ -111,10 +111,10 @@ import {
 const PaymentMethodSelector: React.FC = () => {
   const { selectedPayment, setSelectedPayment } = useAppContext();
   return (
-    <div className="flex items-center space-x-3">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         onClick={() => setSelectedPayment("crypto")}
-        className={`px-3 py-2 rounded-xl border ${
+        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
           selectedPayment === "crypto"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -127,7 +127,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("card")}
-        className={`px-3 py-2 rounded-xl border ${
+        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
           selectedPayment === "card"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -140,7 +140,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("bank")}
-        className={`px-3 py-2 rounded-xl border ${
+        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
           selectedPayment === "bank"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -153,7 +153,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("mobile")}
-        className={`px-3 py-2 rounded-xl border ${
+        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
           selectedPayment === "mobile"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"

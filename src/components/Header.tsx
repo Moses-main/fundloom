@@ -2,13 +2,24 @@
 // import "../global.css";
 import "../App.css";
 import { useState } from "react";
-import { Link } from "react-router-dom"; // React Router Link
+import { Link, useLocation } from "react-router-dom"; // React Router Link
 import { Button } from "../components/ui/Button";
 import { ThemeToggle } from "../components/theme-toggle";
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X, Zap, Wallet, CheckCircle } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith("/dashboard");
+  const {
+    activeTab,
+    setActiveTab,
+    walletConnected,
+    connectWallet,
+    disconnectWallet,
+    userAddress,
+  } = useAppContext();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -18,52 +29,94 @@ export const Header: React.FC = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-mono text-xl font-bold">FundFlow</span>
+          <span className="font-mono text-xl font-bold">FundLoom</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <a
-            href="#features"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Features
-          </a>
-          <a
-            href="#how-it-works"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            How It Works
-          </a>
-          <a
-            href="#campaigns"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Campaigns
-          </a>
-          <a
-            href="#pricing"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Pricing
-          </a>
+        <nav className="hidden md:flex items-center space-x-2">
+          {isDashboard ? (
+            <div className="flex items-center gap-2">
+              {["campaigns", "donate", "charity", "profile"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                    ${
+                      activeTab === tab
+                        ? "bg-muted text-foreground"
+                        : "hover:bg-muted/60 text-muted-foreground"
+                    }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <>
+              <a
+                href="#features"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                How It Works
+              </a>
+              <a
+                href="#campaigns"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Campaigns
+              </a>
+              <a
+                href="#pricing"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Pricing
+              </a>
+            </>
+          )}
         </nav>
 
         <div className="flex items-center space-x-2">
           <ThemeToggle />
           <div className="hidden md:flex items-center space-x-2">
-            <Button variant="ghost" size="sm" asChild>
-              {/* Use React Router Link with `to` */}
-              <Link
-                to="/auth"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Sign In
-              </Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link to="/auth?mode=signup">Create Campaign</Link>
-            </Button>
+            {isDashboard ? (
+              walletConnected ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-foreground">
+                      {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={disconnectWallet}>
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <Button size="sm" onClick={connectWallet}>
+                  <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
+                </Button>
+              )
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link
+                    to="/auth"
+                    className="text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/auth?mode=signup">Create Campaign</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -112,44 +165,76 @@ export const Header: React.FC = () => {
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <a
-                href="#features"
-                className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                How It Works
-              </a>
-              <a
-                href="#campaigns"
-                className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Campaigns
-              </a>
-              <a
-                href="#pricing"
-                className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Pricing
-              </a>
-              <div className="pt-2 grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    Sign In
-                  </Link>
-                </Button>
-                <Button className="w-full" onClick={() => setIsMenuOpen(false)}>
-                  Create
-                </Button>
-              </div>
+              {isDashboard ? (
+                <>
+                  {["campaigns", "donate", "charity", "profile"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setActiveTab(tab as any);
+                        setIsMenuOpen(false);
+                      }}
+                      className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
+                        activeTab === tab ? "bg-muted/60" : ""
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                  <div className="pt-2 grid grid-cols-1 gap-2">
+                    {walletConnected ? (
+                      <Button variant="outline" className="w-full" onClick={() => { disconnectWallet(); setIsMenuOpen(false); }}>
+                        Disconnect ({userAddress.slice(0, 6)}...{userAddress.slice(-4)})
+                      </Button>
+                    ) : (
+                      <Button className="w-full" onClick={() => { connectWallet(); setIsMenuOpen(false); }}>
+                        <Wallet className="h-4 w-4 mr-2" /> Connect Wallet
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="#features"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Features
+                  </a>
+                  <a
+                    href="#how-it-works"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    How It Works
+                  </a>
+                  <a
+                    href="#campaigns"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Campaigns
+                  </a>
+                  <a
+                    href="#pricing"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Pricing
+                  </a>
+                  <div className="pt-2 grid grid-cols-2 gap-2">
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                        Sign In
+                      </Link>
+                    </Button>
+                    <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
+                      <Link to="/auth?mode=signup">Create</Link>
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </nav>
         </div>

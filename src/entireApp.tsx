@@ -593,6 +593,24 @@ const Entire: React.FC = () => {
               )}
             </div>
           </div>
+          {/* Mobile nav */}
+          <div className="md:hidden py-2">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              {["campaigns", "donate", "charity", "profile"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${
+                    activeTab === tab
+                      ? "bg-blue-100 text-blue-700 shadow-sm"
+                      : "text-gray-700 bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -691,7 +709,7 @@ const Entire: React.FC = () => {
 
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="hidden md:flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm"
+                  className="flex w-full md:w-auto items-center justify-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="text-sm">Create Campaign</span>
@@ -705,10 +723,10 @@ const Entire: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
                 <div className="h-48 bg-gradient-to-br from-white to-gray-50 relative flex items-center justify-center">
                   <div className="text-center p-6">
-                    <div className="mx-auto mt-60 w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
                       <Plus className="h-6 w-6" />
                     </div>
-                    <h3 className="text-xl  font-bold text-gray-900 mt-4">
+                    <h3 className="text-xl font-bold text-gray-900 mt-4">
                       Start a Campaign
                     </h3>
                     <p className="text-gray-600 text-sm mt-2">

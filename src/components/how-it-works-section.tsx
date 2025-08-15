@@ -63,7 +63,7 @@ export function HowItWorksSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            How <span className="font-mono text-primary">FundFlow</span> Works
+            How <span className="font-mono text-primary">Fundloom</span> Works
           </h2>
           <p className="text-lg text-muted-foreground">
             Launch your campaign in minutes and start receiving support from a

@@ -17,20 +17,20 @@ const CampaignDetail: React.FC = () => {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-      <div className="flex items-start space-x-6">
-        <div className="w-1/3">
+      <div className="flex flex-col lg:flex-row items-start gap-6">
+        <div className="w-full lg:w-1/3">
           {selectedCampaign.image ? (
             <img
               src={selectedCampaign.image}
               alt={selectedCampaign.title}
-              className="rounded-xl w-full h-48 object-cover"
+              className="rounded-xl w-full h-56 sm:h-64 object-cover"
             />
           ) : (
-            <div className="h-48 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500" />
+            <div className="h-56 sm:h-64 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500 w-full" />
           )}
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 w-full">
           <h2 className="text-2xl font-bold text-gray-900">
             {selectedCampaign.title}
           </h2>
@@ -66,19 +66,19 @@ const CampaignDetail: React.FC = () => {
               {formatAmount(selectedCampaign.target_amount)}
             </div>
 
-            <div className="mt-4 flex space-x-3">
+            <div className="mt-4 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
               <button
                 onClick={() => {
                   setShowDonationModal(true);
                   setActiveTab("campaigns");
                 }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl w-full sm:w-auto"
               >
                 Donate
               </button>
               <button
                 onClick={() => copyShareLink(selectedCampaign.id)}
-                className="bg-white border border-gray-200 px-4 py-2 rounded-xl"
+                className="bg-white border border-gray-200 px-4 py-2 rounded-xl w-full sm:w-auto"
               >
                 Share
               </button>
@@ -86,7 +86,7 @@ const CampaignDetail: React.FC = () => {
                 href={buildSocialLinks(selectedCampaign).twitter}
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm text-blue-500"
+                className="text-sm text-blue-500 text-center sm:text-left"
               >
                 Tweet
               </a>
@@ -101,7 +101,7 @@ const CampaignDetail: React.FC = () => {
         <p className="text-sm text-gray-600 mt-2">
           A short breakdown of how funds are being used (demo data)
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {selectedCampaign.funds_used &&
           Object.entries(selectedCampaign.funds_used).length > 0 ? (
             Object.entries(selectedCampaign.funds_used).map(([k, v]) => (

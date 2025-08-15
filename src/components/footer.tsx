@@ -13,7 +13,7 @@
 //               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
 //                 <Zap className="h-5 w-5 text-primary-foreground" />
 //               </div>
-//               <span className="font-mono text-xl font-bold">FundFlow</span>
+//               <span className="font-mono text-xl font-bold">FundLoom</span>
 //             </Link>
 //             <p className="text-sm text-muted-foreground leading-relaxed">
 //               Empowering creators and supporters through decentralized
@@ -179,7 +179,7 @@
 
 //         <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
 //           <p className="text-sm text-muted-foreground">
-//             © 2025 FundFlow. All rights reserved.
+//             © 2025 Fundloom. All rights reserved.
 //           </p>
 //           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
 //             <span>Built with ❤️ for creators worldwide</span>
@@ -205,7 +205,7 @@ export const Footer: React.FC = () => {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Zap className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-mono text-xl font-bold">FundFlow</span>
+              <span className="font-mono text-xl font-bold">FundLoom</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Empowering creators and supporters through decentralized
@@ -371,7 +371,7 @@ export const Footer: React.FC = () => {
 
         <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p className="text-sm text-muted-foreground">
-            © 2025 FundFlow. All rights reserved.
+            © 2025 FundLoom. All rights reserved.
           </p>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <span>Built with ❤️ for creators worldwide</span>

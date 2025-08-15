@@ -9,11 +9,11 @@ const CampaignStats: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Total Raised</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm font-medium text-muted-foreground">Total Raised</p>
+            <p className="text-3xl font-bold text-foreground">
               ₦{formatAmount(totalRaised)}
             </p>
           </div>
@@ -21,37 +21,31 @@ const CampaignStats: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">
-              Active Campaigns
-            </p>
-            <p className="text-3xl font-bold text-gray-900">
-              {campaigns.length}
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">Active Campaigns</p>
+            <p className="text-3xl font-bold text-foreground">{campaigns.length}</p>
           </div>
           <Target className="h-8 w-8 text-blue-500" />
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Total Donors</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {donations.length}
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">Total Donors</p>
+            <p className="text-3xl font-bold text-foreground">{donations.length}</p>
           </div>
           <Users className="h-8 w-8 text-purple-500" />
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Impact Score</p>
-            <p className="text-3xl font-bold text-gray-900">98%</p>
+            <p className="text-sm font-medium text-muted-foreground">Impact Score</p>
+            <p className="text-3xl font-bold text-foreground">98%</p>
           </div>
           <Heart className="h-8 w-8 text-red-500" />
         </div>

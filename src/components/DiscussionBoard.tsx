@@ -32,16 +32,16 @@ const DiscussionBoard: React.FC = () => {
           ))}
       </div>
 
-      <div className="flex space-x-3">
+      <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
         <input
           value={commentDraft}
           onChange={(e) => setCommentDraft(e.target.value)}
           placeholder="Join the discussion..."
-          className="flex-1 px-4 py-2 border border-gray-200 rounded-xl"
+          className="w-full sm:flex-1 px-4 py-2 border border-gray-200 rounded-xl"
         />
         <button
           onClick={() => addComment(selectedCampaign.id)}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl w-full sm:w-auto"
         >
           Comment
         </button>

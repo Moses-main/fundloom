@@ -8,20 +8,20 @@ const Leaderboard: React.FC<{
 }> = ({ topDonors, topCampaigns }) => {
   return (
     <>
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-        <h4 className="font-semibold text-gray-900 mb-4">Top Donors</h4>
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
+        <h4 className="font-semibold text-foreground mb-4">Top Donors</h4>
         <div className="space-y-3">
           {topDonors.map((d) => (
             <div key={d.address} className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                   <Award className="h-5 w-5 text-yellow-500" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-foreground">
                     {d.name}
                   </div>
-                  <div className="text-xs text-gray-500">{d.address}</div>
+                  <div className="text-xs text-muted-foreground">{d.address}</div>
                 </div>
               </div>
               <div className="text-sm font-semibold">₦{d.total}</div>
@@ -30,16 +30,16 @@ const Leaderboard: React.FC<{
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-        <h4 className="font-semibold text-gray-900 mb-4">Top Campaigns</h4>
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
+        <h4 className="font-semibold text-foreground mb-4">Top Campaigns</h4>
         <div className="space-y-3">
           {topCampaigns.map((c) => (
             <div key={c.id} className="flex justify-between items-center">
               <div>
-                <div className="text-sm font-medium text-gray-900">
+                <div className="text-sm font-medium text-foreground">
                   {c.title}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {c.total_donors} donors
                 </div>
               </div>
@@ -49,8 +49,8 @@ const Leaderboard: React.FC<{
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-        <h4 className="font-semibold text-gray-900 mb-4">Badges</h4>
+      <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
+        <h4 className="font-semibold text-foreground mb-4">Badges</h4>
         <div className="flex flex-wrap gap-2">
           <span className="px-3 py-1 rounded-full bg-yellow-50 border border-yellow-100 text-yellow-700 text-sm">
             Supporter
