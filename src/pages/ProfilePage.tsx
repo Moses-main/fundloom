@@ -1,7 +1,9 @@
 import React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Button } from "../components/ui/Button"; // Adjust path based on your folder structure
 import { Input } from "../components/ui/Input"; // Adjust path based on your folder structure
+import { API_BASE_URL } from "../lib/api";
 import {
   User,
   DollarSign,
@@ -21,14 +23,27 @@ interface ProfileData {
 }
 
 const ProfilePage: React.FC = () => {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Preload from localStorage if available for instant accuracy
+  const initialUser = (() => {
+    try {
+      const raw = localStorage.getItem("auth_user");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
   const [profile, setProfile] = useState<ProfileData>({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    bio: "Software developer passionate about blockchain and web3.",
+    name: initialUser?.name || initialUser?.fullname || "John Doe",
+    email: initialUser?.email || "john.doe@example.com",
+    bio: initialUser?.profile?.bio || "Software developer passionate about blockchain and web3.",
   });
+  const [lastLogin, setLastLogin] = useState<string | null>(initialUser?.lastLogin || null);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [prefDarkMode, setPrefDarkMode] = useState(false);
   const [prefEmailNotif, setPrefEmailNotif] = useState(true);
   const [googleConnected] = useState(true);
 
@@ -47,6 +62,32 @@ const ProfilePage: React.FC = () => {
     setIsEditing(false);
     console.log("Profile saved:", profile);
   };
+
+  // Load the authenticated user from backend
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await res.json();
+        if (res.ok && body?.data?.user) {
+          const u = body.data.user;
+          setProfile((prev) => ({
+            name: u.name || u.fullname || prev.name,
+            email: u.email || prev.email,
+            bio: (u.profile && u.profile.bio) || prev.bio,
+          }));
+          if (u.lastLogin) setLastLogin(u.lastLogin);
+        }
+      } catch (e) {
+        console.warn("Failed to load profile:", e);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <div className="min-h-screen px-4 py-6 bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
@@ -95,7 +136,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <div>
               <div className="text-sm text-gray-500">Last Login</div>
-              <div className="text-lg font-semibold">—</div>
+              <div className="text-lg font-semibold">{lastLogin ? new Date(lastLogin).toLocaleString() : "—"}</div>
             </div>
           </div>
         </div>
@@ -189,19 +230,19 @@ const ProfilePage: React.FC = () => {
                 <Moon className="h-4 w-4" />
                 <div>
                   <div className="font-medium">Dark mode</div>
-                  <div className="text-sm text-gray-500">Toggle site theme preference.</div>
+                  <div className="text-sm text-gray-500">Toggle site theme preference. Current: {mounted ? resolvedTheme : "..."}</div>
                 </div>
               </div>
               <input
                 type="checkbox"
                 className="h-5 w-5"
-                checked={prefDarkMode}
-                onChange={(e) => setPrefDarkMode(e.target.checked)}
+                checked={mounted ? resolvedTheme === "dark" : false}
+                onChange={(e) => setTheme(e.target.checked ? "dark" : "light")}
               />
             </label>
           </div>
           <div className="mt-4">
-            <Button onClick={() => console.log("Saved preferences", { prefDarkMode, prefEmailNotif })}>
+            <Button onClick={() => console.log("Saved preferences", { theme: resolvedTheme, prefEmailNotif })}>
               Save Preferences
             </Button>
           </div>

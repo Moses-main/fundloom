@@ -11,8 +11,9 @@ export default function Layout({ children }: LayoutProps) {
     <div className="font-sans antialiased">
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        defaultTheme="light"
+        enableSystem={false}
+        storageKey="fundloom-theme"
         disableTransitionOnChange
       >
         {children}
