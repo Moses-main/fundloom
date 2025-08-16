@@ -89,8 +89,13 @@ export function HowItWorksSection() {
                   <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-2xl bg-teal-200/30">
                     <Icon className="h-9 w-9 text-teal-700" />
                   </div>
-                  <div className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white text-sm font-bold font-mono">
-                    {index + 1}
+                  <div className="absolute -top-4 -right-4 flex items-center justify-center">
+                    <div className="relative">
+                      <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-teal-500 to-teal-300 blur-sm opacity-70" />
+                      <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-teal-600 text-white text-base font-extrabold font-mono ring-4 ring-white/70 shadow-md">
+                        {index + 1}
+                      </div>
+                    </div>
                   </div>
                 </CardHeader>
 

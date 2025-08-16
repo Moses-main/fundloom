@@ -97,7 +97,7 @@ export const Header: React.FC = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-2">
+        <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
           {isDashboard ? (
             <div className="flex items-center gap-2">
               {["campaigns", "donate", "charity", "profile"].map((tab) => (
@@ -123,6 +123,12 @@ export const Header: React.FC = () => {
               >
                 Features
               </a>
+              <Link
+                to="/feature"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Feature Page
+              </Link>
               <a
                 href="#how-it-works"
                 className="text-sm font-medium hover:text-primary transition-colors"
@@ -145,9 +151,9 @@ export const Header: React.FC = () => {
           )}
         </nav>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3 lg:space-x-4">
           <ThemeToggle />
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
             {isDashboard ? (
               <div className="flex items-center gap-2">
                 {walletConnected && (
@@ -310,6 +316,13 @@ export const Header: React.FC = () => {
                   >
                     Features
                   </a>
+                  <Link
+                    to="/feature"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Feature Page
+                  </Link>
                   <a
                     href="#how-it-works"
                     className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"

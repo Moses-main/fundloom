@@ -14,13 +14,11 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
     getDaysLeft,
     getProgressPercentage,
     formatAmount,
-    openCampaign,
     setSelectedCampaign,
     setShowDonationModal,
     setActiveTab,
     copyShareLink,
     buildSocialLinks,
-    walletConnected,
   } = useAppContext() as any;
 
   return (
@@ -88,11 +86,13 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
 
         <div className="mt-6 flex space-x-3">
           <button
-            onClick={() => openCampaign(campaign)}
-            disabled={!walletConnected}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            onClick={() => {
+              setSelectedCampaign(campaign);
+              setShowDonationModal(true);
+            }}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
           >
-            {walletConnected ? "Donate Now" : "Connect Wallet to Donate"}
+            Donate Now
           </button>
 
           <div className="flex items-center space-x-2">

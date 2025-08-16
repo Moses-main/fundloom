@@ -1,13 +1,23 @@
 // src/components/CampaignList.tsx
 import React from "react";
-import { Campaign } from "../context/AppContext";
+import { Campaign, useAppContext } from "../context/AppContext";
 import CampaignCard from "./CampaignCard";
 
 const CampaignList: React.FC<{ campaigns: Campaign[] }> = ({ campaigns }) => {
+  const { setShowCreateModal } = useAppContext();
   return (
     <>
       {/* Create card (first) is shown inside CampaignList */}
-      <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden hover:shadow-xl transition-all duration-300">
+      <div
+        className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer hover:border-primary/40"
+        onClick={() => setShowCreateModal(true)}
+        role="button"
+        aria-label="Start a Campaign"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setShowCreateModal(true);
+        }}
+      >
         <div className="h-48 bg-muted/50 relative flex items-center justify-center">
           <div className="text-center p-6 flex flex-col items-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">

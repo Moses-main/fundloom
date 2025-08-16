@@ -13,6 +13,7 @@ import ForgotWalletPage from "./pages/ForgotWallet";
 import DashboardPage from "./pages/DashboardPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import StarknetProvider from "./utils/starknetProvider";
+import FeaturePage from "./pages/Feature";
 
 // testing with the entire application
 // import Entire from "./entireApp";
@@ -31,6 +32,7 @@ function App() {
               <Route path="/campaigns" element={<CampaignsPage />} />
               {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/feature" element={<FeaturePage />} />
               <Route
                 path="/profile"
                 element={<Navigate to="/dashboard?tab=profile" replace />}

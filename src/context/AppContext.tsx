@@ -64,22 +64,7 @@ export interface Comment {
   timestamp: number;
 }
 
-/* ---------------------- localStorage helpers ---------------------- */
-const LS_KEYS = {
-  campaigns: "cc_campaigns_v1",
-  donations: "cc_donations_v1",
-  comments: "cc_comments_v1",
-};
-
-const readJSON = <T,>(k: string, fallback: T): T => {
-  try {
-    const raw = localStorage.getItem(k);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-};
+/* ---------------------- (legacy localStorage removed) ---------------------- */
 
 /* ------------------ seed data (copied from original) ------------- */
 const SEED_CAMPAIGNS: Campaign[] = [
