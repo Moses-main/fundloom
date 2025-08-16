@@ -98,7 +98,7 @@
 // };
 
 // src/components/DonationModal.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import {
   Wallet,
@@ -107,6 +107,7 @@ import {
   Smartphone,
   CheckCircle,
 } from "lucide-react";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const PaymentMethodSelector: React.FC = () => {
   const { selectedPayment, setSelectedPayment } = useAppContext();
@@ -187,6 +188,11 @@ const DonationModal: React.FC = () => {
     setUserName,
   } = useAppContext();
 
+  const [donorEmail, setDonorEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const backendId = (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
+  const { show: toast } = useToast();
+
   if (!selectedCampaign) return null;
 
   return (
@@ -244,6 +250,27 @@ const DonationModal: React.FC = () => {
             />
           </div>
 
+          {selectedPayment === "card" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email (required for card payments)
+              </label>
+              <input
+                type="email"
+                value={donorEmail}
+                onChange={(e) => setDonorEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                placeholder="you@example.com"
+                required
+              />
+              {!backendId && (
+                <p className="text-xs text-red-600 mt-2">
+                  This campaign isn\'t synced with the server yet. Please create/select a server-backed campaign to use card payments.
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Donation Amount (₦)
@@ -281,13 +308,46 @@ const DonationModal: React.FC = () => {
             </p>
           </div>
 
-          <button
-            onClick={() => handleDonate(true)}
-            disabled={!donationAmount}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-          >
-            Confirm Donation
-          </button>
+          <ActionButton
+            submitting={submitting}
+            disabled={!donationAmount || (selectedPayment === "card" && (!donorEmail || !backendId))}
+            onClick={async () => {
+              const amountNum = parseFloat(donationAmount || "0");
+              if (!selectedCampaign || !amountNum || amountNum <= 0) return;
+              if (selectedPayment === "card") {
+                // Initialize Paystack and redirect
+                try {
+                  setSubmitting(true);
+                  if (!backendId) {
+                    setSubmitting(false);
+                    return;
+                  }
+                  const { initPaystackCard } = await import("../lib/api");
+                  const resp = await initPaystackCard({
+                    campaignId: String(backendId),
+                    amount: amountNum,
+                    email: donorEmail.trim(),
+                    donorName: userName || undefined,
+                    isAnonymous: !userName,
+                    message: donationMessage || undefined,
+                    // Optionally set a callback URL; leaving undefined relies on webhook-only confirmation
+                  });
+                  if (resp?.success && (resp.data as any)?.authorizationUrl) {
+                    window.location.href = (resp.data as any).authorizationUrl;
+                  } else {
+                    throw new Error(resp?.message || "Failed to initialize Paystack");
+                  }
+                } catch (e: any) {
+                  toast({ type: "error", title: "Payment init failed", description: e?.message || "Failed to start card payment." });
+                } finally {
+                  setSubmitting(false);
+                }
+              } else {
+                // Existing demo/backend flow
+                handleDonate(true);
+              }
+            }}
+          />
         </div>
       </div>
     </div>
@@ -295,3 +355,19 @@ const DonationModal: React.FC = () => {
 };
 
 export default DonationModal;
+
+const ActionButton: React.FC<{
+  submitting?: boolean;
+  disabled?: boolean;
+  onClick: () => void | Promise<void>;
+}> = ({ submitting, disabled, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || submitting}
+      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+    >
+      {submitting ? "Redirecting..." : "Confirm Donation"}
+    </button>
+  );
+};

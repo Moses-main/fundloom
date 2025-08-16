@@ -14,6 +14,7 @@ import {
   getCampaignComments,
   getCampaigns,
 } from "../lib/api";
+import { useToast } from "@/components/ui/ToastProvider";
 
 /* ---------- Types (same as your single-file app) ---------- */
 export type PaymentMethod = "crypto" | "card" | "bank" | "mobile";
@@ -283,6 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [backendRecentDonations, setBackendRecentDonations] = useState<any[] | undefined>(undefined);
   const [backendComments, setBackendComments] = useState<any[] | undefined>(undefined);
+  const { show: toast } = useToast();
 
   // Quick refresh helper for backend campaign details
   const refreshBackendDetails = async (backendId: string) => {
@@ -497,7 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // We require a backend campaign ID to donate
     const backendId = (selectedCampaign as any).backendId || (selectedCampaign as any)._id;
     if (!backendId) {
-      alert("This campaign isn't synced with the server yet. Please create/select a server-backed campaign.");
+      toast({ type: "info", title: "Not synced", description: "Select a server-backed campaign to donate." });
       return;
     }
 
@@ -546,7 +548,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshBackendDetails(String(backendId));
       }
     } catch (e: any) {
-      alert(e?.message || "Donation failed. Please try again.");
+      toast({ type: "error", title: "Donation failed", description: e?.message || "Please try again." });
     }
   };
 
@@ -602,9 +604,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const base = window.location.origin + window.location.pathname;
       const shareUrl = `${base}?campaign=${id}`;
       navigator.clipboard.writeText(shareUrl);
-      alert("Campaign link copied to clipboard!");
+      toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
     } catch {
-      alert("Unable to copy link. Please copy manually.");
+      toast({ type: "warning", title: "Copy failed", description: "Unable to copy link. Please copy manually." });
     }
   };
 
@@ -634,12 +636,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!commentDraft) return;
     const backendId = (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
     if (!backendId) {
-      alert("This campaign isn't synced with the server. Cannot post comment.");
+      toast({ type: "info", title: "Not synced", description: "Select a server-backed campaign to comment." });
       return;
     }
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      alert("Please log in to comment.");
+      toast({ type: "info", title: "Login required", description: "Please log in to comment." });
       return;
     }
     try {
@@ -652,7 +654,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {}
       setCommentDraft("");
     } catch (e: any) {
-      alert(e?.message || "Failed to post comment.");
+      toast({ type: "error", title: "Comment failed", description: e?.message || "Failed to post comment." });
     }
   };
   const [commentDraft, setCommentDraft] = useState("");

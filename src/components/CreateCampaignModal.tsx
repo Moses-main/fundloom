@@ -152,9 +152,10 @@
 // }
 
 // src/components/CreateCampaignModal.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 import { createCampaign, uploadImage } from "../lib/api";
+import { useToast } from "./ui/ToastProvider";
 
 const CreateCampaignModal: React.FC = () => {
   const {
@@ -172,9 +173,20 @@ const CreateCampaignModal: React.FC = () => {
   const [newImagePath, setNewImagePath] = useState<string>("");
   const [newCategory, setNewCategory] = useState("Charity");
   const [newTemplate, setNewTemplate] = useState("default");
+  const { show: toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
+    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+    if (!file.type?.startsWith("image/")) {
+      toast({ type: "warning", title: "Invalid file", description: "Please select a valid image file." });
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      toast({ type: "warning", title: "Image too large", description: "Please choose an image under 5MB." });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => setNewImage(String(e.target?.result || null));
     reader.readAsDataURL(file);
@@ -182,14 +194,37 @@ const CreateCampaignModal: React.FC = () => {
 
   const handleCreate = async () => {
     if (!newTitle || !newDescription || !newTarget || !newDeadline) {
-      alert("Please fill all fields to create a campaign.");
+      toast({ type: "warning", title: "Missing fields", description: "Please fill all fields to create a campaign." });
       return;
     }
-    let imageToUse = (newImagePath && newImagePath.trim()) || newImage || null;
+    // Basic client-side validations aligned with backend Joi
+    if (newTitle.trim().length < 5) {
+      toast({ type: "warning", title: "Title too short", description: "Title must be at least 5 characters long" });
+      return;
+    }
+    if (newDescription.trim().length < 20) {
+      toast({ type: "warning", title: "Description too short", description: "Description must be at least 20 characters long" });
+      return;
+    }
+    const targetNum = parseFloat(newTarget);
+    if (isNaN(targetNum) || targetNum < 1000) {
+      toast({ type: "warning", title: "Invalid target", description: "Target amount must be at least ₦1,000" });
+      return;
+    }
+    // Normalize deadline to end-of-day to avoid timezone edge cases causing "past" dates
+    const deadlineLocal = new Date(`${newDeadline}T23:59:59`);
+    const deadlineIso = deadlineLocal.toISOString();
+    if (deadlineLocal.getTime() <= Date.now()) {
+      toast({ type: "warning", title: "Invalid deadline", description: "Deadline must be in the future" });
+      return;
+    }
+    // Normalize image inputs
+    const imagePathTrim = (newImagePath || "").trim();
+    let imageToUse = (imagePathTrim && imagePathTrim) || newImage || null;
     // Require authentication for creation
     const token = localStorage.getItem("auth_token") || undefined;
     if (!token) {
-      alert("Please log in to create a campaign. Campaigns must be saved to the backend.");
+      toast({ type: "info", title: "Login required", description: "Please log in to create a campaign." });
       return;
     }
     let backendCampaign: any | null = null;
@@ -198,62 +233,79 @@ const CreateCampaignModal: React.FC = () => {
         // If an image is provided, upload to Cloudinary first
         if (imageToUse) {
           try {
-            let payload: { file?: string; url?: string } = {};
-            if (newImage) {
+            let payload: { file?: string; url?: string } | null = null;
+            if (newImage && newImage.startsWith("data:")) {
               payload = { file: newImage };
-            } else if (newImagePath.startsWith("http")) {
-              payload = { url: newImagePath };
-            } else {
+            } else if (imagePathTrim && imagePathTrim.startsWith("http")) {
+              payload = { url: imagePathTrim };
+            } else if (imagePathTrim && imagePathTrim.startsWith("/")) {
               // Relative public path: fetch and convert to data URL for upload
-              const rel = newImagePath.startsWith("/") ? newImagePath : "/" + newImagePath;
+              const rel = imagePathTrim;
               try {
                 const resp = await fetch(rel);
-                const blob = await resp.blob();
-                const toDataUrl = (b: Blob) =>
-                  new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(String(reader.result));
-                    reader.onerror = reject;
-                    reader.readAsDataURL(b);
-                  });
-                const dataUrl = await toDataUrl(blob);
-                payload = { file: dataUrl };
+                if (resp.ok) {
+                  const blob = await resp.blob();
+                  const toDataUrl = (b: Blob) =>
+                    new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => resolve(String(reader.result));
+                      reader.onerror = reject;
+                      reader.readAsDataURL(b);
+                    });
+                  const dataUrl = await toDataUrl(blob);
+                  payload = { file: dataUrl };
+                } else {
+                  // Fallback to absolute URL of the public asset
+                  payload = { url: `${window.location.origin}${rel}` } as any;
+                }
               } catch (e) {
-                // Fallback to URL (may fail on Cloudinary due to localhost)
+                // Fallback to absolute URL of the public asset
                 payload = { url: `${window.location.origin}${rel}` } as any;
               }
             }
-            const up = await uploadImage(payload, token);
-            const uploadedUrl = (up as any)?.data?.url;
-            if (uploadedUrl) imageToUse = uploadedUrl;
+
+            // Only call upload API if we constructed a valid payload
+            if (payload && (payload.file || payload.url)) {
+              const up = await uploadImage({ ...payload, folder: 'fundloom/campaigns' }, token);
+              const uploadedUrl = (up as any)?.data?.url;
+              if (uploadedUrl) imageToUse = uploadedUrl;
+            }
           } catch (e) {
-            console.warn("Image upload failed, proceeding without Cloudinary URL:", (e as any)?.message || e);
+            console.warn("Image upload failed, proceeding without image:", (e as any)?.message || e);
+            // Do NOT send base64 or invalid image in campaign payload; drop image to avoid large bodies and validation surprises
+            imageToUse = null;
+            toast({ type: "warning", title: "Image upload failed", description: "We couldn't upload your image. You can proceed without an image or try another file/URL." });
           }
         }
-        const res = await createCampaign(
-          {
-            title: newTitle,
-            description: newDescription,
-            category: newCategory,
-            targetAmount: parseFloat(newTarget),
-            deadline: new Date(newDeadline).toISOString(),
-            image: imageToUse,
-            template: newTemplate as any,
-            charityAddress: userAddress || undefined,
-          },
-          token
-        );
+        // Only include charityAddress if it matches backend's Ethereum address pattern
+        const ethAddrRegex = /^0x[a-fA-F0-9]{40}$/;
+        const payload: any = {
+          title: newTitle.trim(),
+          description: newDescription.trim(),
+          category: newCategory,
+          targetAmount: targetNum,
+          deadline: deadlineIso,
+          // Never send base64 data URLs to the create endpoint; only include a URL
+          ...(imageToUse && !String(imageToUse).startsWith("data:")
+            ? { image: imageToUse }
+            : {}),
+          template: newTemplate as any,
+        };
+        if (userAddress && ethAddrRegex.test(userAddress)) {
+          payload.charityAddress = userAddress;
+        }
+        const res = await createCampaign(payload, token);
         backendCampaign = res?.data?.campaign || null;
       } catch (e: any) {
         console.error("Campaign creation failed:", e?.message || e);
-        alert(e?.message || "Failed to create campaign. Please try again.");
+        toast({ type: "error", title: "Create failed", description: e?.message || "Failed to create campaign. Please try again." });
         return;
       }
     }
 
     // Ensure we have a backend campaign
     if (!backendCampaign) {
-      alert("Failed to create campaign on the server. Please try again.");
+      toast({ type: "error", title: "No campaign", description: "Failed to create campaign on the server. Please try again." });
       return;
     }
 
@@ -286,6 +338,7 @@ const CreateCampaignModal: React.FC = () => {
     setShowCreateModal(false);
     setSelectedCampaign(campaign);
     setActiveTab("campaigns");
+    toast({ type: "success", title: "Campaign created", description: "Your campaign has been created successfully." });
     // push campaign param for share
     if (window.history && window.history.pushState) {
       const base = window.location.origin + window.location.pathname;
@@ -295,12 +348,12 @@ const CreateCampaignModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-xl w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">Create a Campaign</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create a Campaign</h3>
           <button
             onClick={() => setShowCreateModal(false)}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-200"
           >
             ×
           </button>
@@ -308,65 +361,71 @@ const CreateCampaignModal: React.FC = () => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Title
             </label>
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
               placeholder="Campaign title"
+              required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Description
             </label>
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
               rows={4}
               placeholder="Describe the campaign"
+              required
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Target Amount (₦)
               </label>
               <input
                 type="number"
                 value={newTarget}
                 onChange={(e) => setNewTarget(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
                 placeholder="e.g. 50000"
+                min={1000}
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Deadline
               </label>
               <input
                 type="date"
                 value={newDeadline}
                 onChange={(e) => setNewDeadline(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
+                min={new Date().toISOString().split('T')[0]}
+                required
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Category
               </label>
               <select
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               >
                 <option>Charity</option>
                 <option>Education</option>
@@ -376,16 +435,18 @@ const CreateCampaignModal: React.FC = () => {
                 <option>Event</option>
                 <option>Small Business</option>
                 <option>Community</option>
+                <option>Emergency</option>
+                <option>Environment</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Template
               </label>
               <select
                 value={newTemplate}
                 onChange={(e) => setNewTemplate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               >
                 <option value="default">Default</option>
                 <option value="impact">Impact (bold)</option>
@@ -396,32 +457,70 @@ const CreateCampaignModal: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Cover Image (optional)
             </label>
+            {/* Hidden file input triggered by button */}
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={(e: any) => handleImageUpload(e.target.files?.[0])}
-              className="w-full"
+              className="hidden"
             />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 text-sm"
+              >
+                Upload Image
+              </button>
+              {newImage && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">Image selected</span>
+              )}
+            </div>
             {newImage && (
-              <img
-                src={newImage}
-                alt="preview"
-                className="mt-3 rounded-lg w-full h-36 object-cover"
-              />
+              <div className="relative mt-3">
+                <img
+                  src={newImage}
+                  alt="preview"
+                  className="rounded-lg w-full h-36 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setNewImage(null); setNewImagePath(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  className="absolute top-2 right-2 bg-white/80 dark:bg-gray-900/70 hover:bg-white dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow"
+                  title="Remove image"
+                  aria-label="Remove image"
+                >
+                  ×
+                </button>
+              </div>
             )}
             <div className="mt-3">
-              <label className="block text-xs text-gray-600 mb-1">
+              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
                 Or use a public image path or URL (e.g. /students-coding.png)
               </label>
-              <input
-                value={newImagePath}
-                onChange={(e) => setNewImagePath(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                placeholder="/your-public-image.png or https://..."
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  value={newImagePath}
+                  onChange={(e) => setNewImagePath(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
+                  placeholder="/your-public-image.png or https://..."
+                />
+                {newImagePath && (
+                  <button
+                    type="button"
+                    onClick={() => setNewImagePath("")}
+                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Clear image URL"
+                    aria-label="Clear image URL"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -434,7 +533,7 @@ const CreateCampaignModal: React.FC = () => {
             </button>
             <button
               onClick={() => setShowCreateModal(false)}
-              className="flex-1 bg-white border border-gray-200 py-3 rounded-xl font-medium"
+              className="flex-1 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 py-3 rounded-xl font-medium"
             >
               Cancel
             </button>

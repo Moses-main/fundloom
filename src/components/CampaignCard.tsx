@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Campaign, useAppContext } from "../context/AppContext";
 import {
   Users,
@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Target,
 } from "lucide-react";
+import { useToast } from "./ui/ToastProvider";
+import { uploadImage, updateCampaign } from "../lib/api";
 
 const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   const {
@@ -19,11 +21,78 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
     setActiveTab,
     copyShareLink,
     buildSocialLinks,
+    setCampaigns,
   } = useAppContext() as any;
+  const { show: toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onUploadClick = () => fileRef.current?.click();
+
+  const handleFileSelected = async (file?: File) => {
+    try {
+      if (!file) return;
+      const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+      if (!file.type?.startsWith("image/")) {
+        toast({ type: "warning", title: "Invalid file", description: "Please select a valid image file." });
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        toast({ type: "warning", title: "Image too large", description: "Please choose an image under 5MB." });
+        return;
+      }
+      const token = localStorage.getItem("auth_token") || undefined;
+      if (!token) {
+        toast({ type: "info", title: "Login required", description: "Please log in to update the campaign image." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = String(e.target?.result || "");
+        try {
+          const up = await uploadImage({ file: dataUrl, folder: "fundloom/campaigns" }, token);
+          const newUrl = (up as any)?.data?.url;
+          if (!newUrl) throw new Error("Upload failed");
+          await updateCampaign(String(campaign.id), { image: newUrl }, token);
+          setCampaigns((prev: Campaign[]) => prev.map((c) => (c.id === campaign.id ? { ...c, image: newUrl } : c)));
+          toast({ type: "success", title: "Image updated", description: "Campaign cover image has been updated." });
+        } catch (err: any) {
+          toast({ type: "error", title: "Failed to set image", description: err?.message || String(err) });
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (e: any) {
+      toast({ type: "error", title: "Upload error", description: e?.message || String(e) });
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    const token = localStorage.getItem("auth_token") || undefined;
+    if (!token) {
+      toast({ type: "info", title: "Login required", description: "Please log in to remove the campaign image." });
+      return;
+    }
+    try {
+      await updateCampaign(String(campaign.id), { image: null }, token);
+      setCampaigns((prev: Campaign[]) => prev.map((c) => (c.id === campaign.id ? { ...c, image: null } : c)));
+      toast({ type: "success", title: "Image removed", description: "Campaign cover image has been cleared." });
+    } catch (err: any) {
+      toast({ type: "error", title: "Failed to remove image", description: err?.message || String(err) });
+    }
+  };
 
   return (
     <div className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden hover:shadow-xl transition-all duration-300">
       <div className="h-48 relative">
+        {/* Hidden file input for uploads */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e: any) => handleFileSelected(e.target.files?.[0])}
+        />
         {campaign.image ? (
           <img
             src={campaign.image}
@@ -40,6 +109,29 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
             </div>
           </div>
         )}
+
+        {/* Top-right controls: Upload button; Remove icon when image exists */}
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onUploadClick}
+            className="px-3 py-1.5 text-xs rounded-full bg-white/90 dark:bg-gray-900/80 border border-border hover:bg-white dark:hover:bg-gray-900"
+            title="Upload image"
+          >
+            Upload
+          </button>
+          {campaign.image && (
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/90 dark:bg-gray-900/80 border border-border hover:bg-white dark:hover:bg-gray-900"
+              title="Remove image"
+              aria-label="Remove image"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-6">

@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { Button } from "../components/ui/Button"; // Adjust path based on your folder structure
 import { Input } from "../components/ui/Input"; // Adjust path based on your folder structure
 import { API_BASE_URL } from "../lib/api";
+import { useToast } from "@/components/ui/ToastProvider";
 import {
   User,
   DollarSign,
@@ -24,6 +25,7 @@ interface ProfileData {
 
 const ProfilePage: React.FC = () => {
   const { resolvedTheme, setTheme } = useTheme();
+  const { show: toast } = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   // Preload from localStorage if available for instant accuracy
@@ -64,7 +66,7 @@ const ProfilePage: React.FC = () => {
   const handleSave = async () => {
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      alert("Please log in to save your profile.");
+      toast({ type: "info", title: "Login required", description: "Please log in to save your profile." });
       return;
     }
     try {
@@ -91,8 +93,9 @@ const ProfilePage: React.FC = () => {
         }
       } catch {}
       setIsEditing(false);
+      toast({ type: "success", title: "Profile updated", description: "Your profile changes have been saved." });
     } catch (e: any) {
-      alert(e?.message || "Unable to save profile");
+      toast({ type: "error", title: "Save failed", description: e?.message || "Unable to save profile" });
     }
   };
 
@@ -290,7 +293,7 @@ const ProfilePage: React.FC = () => {
               onClick={async () => {
                 const token = localStorage.getItem("auth_token");
                 if (!token) {
-                  alert("Please log in to save preferences.");
+                  toast({ type: "info", title: "Login required", description: "Please log in to save preferences." });
                   return;
                 }
                 try {
@@ -307,8 +310,9 @@ const ProfilePage: React.FC = () => {
                   const body = await res.json();
                   if (!res.ok)
                     throw new Error(body?.message || "Failed to save preferences");
+                  toast({ type: "success", title: "Preferences saved", description: "Your notification preference has been updated." });
                 } catch (e: any) {
-                  alert(e?.message || "Unable to save preferences");
+                  toast({ type: "error", title: "Save failed", description: e?.message || "Unable to save preferences" });
                 }
               }}
             >

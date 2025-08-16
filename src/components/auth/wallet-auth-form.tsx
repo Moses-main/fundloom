@@ -11,6 +11,7 @@ import { WalletConnectorModal } from "@/components/modal/WalletConnector";
 import { useAccount as useStarknetAccount } from "@starknet-react/core";
 import { Connector, useConnect } from "@starknet-react/core";
 import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface WalletOption {
   id: string;
@@ -63,6 +64,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const { starknetkitConnectModal } = useStarknetkitConnectModal({
     connectors: connectors as StarknetkitConnector[],
   });
+  const { show: toast } = useToast();
 
   const navigate = useNavigate();
 
@@ -145,9 +147,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       if (walletId === "metamask") {
         const eth = (window as any).ethereum;
         if (!eth || !eth.request) {
-          alert(
-            "MetaMask not detected. Please install MetaMask and try again."
-          );
+          toast({
+            type: "warning",
+            title: "MetaMask not detected",
+            description: "Install the MetaMask extension and try again.",
+          });
           return;
         }
         const accounts: string[] = await eth.request({
@@ -166,9 +170,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
           ethAny?.providers?.find?.((p: any) => p?.isCoinbaseWallet) ||
           (ethAny?.isCoinbaseWallet ? ethAny : null);
         if (!provider || !provider.request) {
-          alert(
-            "Coinbase Wallet not detected. Please install Coinbase Wallet extension and try again."
-          );
+          toast({
+            type: "warning",
+            title: "Coinbase Wallet not detected",
+            description: "Install the Coinbase Wallet extension and try again.",
+          });
           return;
         }
         const accounts: string[] = await provider.request({
@@ -191,9 +197,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         }
         return;
       }
-      alert(
-        `${walletId} is not supported yet. Please use MetaMask, Coinbase, or StarkNet.`
-      );
+      toast({
+        type: "info",
+        title: "Wallet not supported",
+        description: `${walletId} isn't supported yet. Use MetaMask, Coinbase, or StarkNet.`,
+      });
     } catch (error) {
       console.error("Wallet connection error:", error);
     } finally {

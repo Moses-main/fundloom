@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/Form";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
-import { registerUser, loginUser, setAuth, API_BASE_URL } from "@/lib/api";
+import { registerUser, loginUser, setAuth, API_BASE_URL, forgotPassword } from "@/lib/api";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -49,6 +50,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const navigate = useNavigate();
+  const { show: toast } = useToast();
 
   const form = useForm<LoginFormData | SignupFormData>({
     resolver: zodResolver(mode === "login" ? loginSchema : signupSchema),
@@ -65,16 +67,18 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
         const { name, email, password } = data as SignupFormData;
         const auth = await registerUser({ name, email, password });
         setAuth(auth);
+        toast({ type: "success", title: "Account created", description: "Welcome to Fundloom" });
       } else {
         const { email, password } = data as LoginFormData;
         const auth = await loginUser({ email, password });
         setAuth(auth);
+        toast({ type: "success", title: "Signed in", description: "Login successful" });
       }
       navigate("/dashboard");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Authentication failed";
       console.error("Authentication error:", error);
-      alert(msg);
+      toast({ type: "error", title: "Auth error", description: msg });
     } finally {
       setIsLoading(false);
     }
@@ -249,6 +253,23 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
             <button
               type="button"
               className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              onClick={async () => {
+                const email = (form.getValues() as any).email as string;
+                if (!email) {
+                  toast({ type: "warning", title: "Enter email", description: "Please enter your email above first" });
+                  return;
+                }
+                try {
+                  const res = await forgotPassword({ email });
+                  if (res?.resetToken) {
+                    toast({ type: "info", title: "Reset token generated", description: `Dev token: ${res.resetToken}` });
+                  } else {
+                    toast({ type: "success", title: "Email sent", description: "Password reset link sent if the email exists" });
+                  }
+                } catch (e: any) {
+                  toast({ type: "error", title: "Reset failed", description: e?.message || "Could not start password reset" });
+                }
+              }}
             >
               Forgot your password?
             </button>

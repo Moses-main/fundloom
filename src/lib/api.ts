@@ -51,7 +51,12 @@ export async function apiFetch<T>(
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // Prefer specific validation error details when available
+    const firstValidationError = Array.isArray(body?.errors) && body.errors.length > 0
+      ? body.errors[0]?.message || body.errors[0]?.field
+      : undefined;
     const message =
+      firstValidationError ||
       body?.message ||
       body?.error ||
       `Request failed (${res.status}) for ${url}`;
@@ -96,6 +101,16 @@ export async function loginUser(input: {
     body: JSON.stringify(input),
   });
   if (!res.success || !res.data) throw new Error(res.message || "Login failed");
+  return res.data;
+}
+
+// Forgot password — backend sends reset token (dev) or email (prod)
+export async function forgotPassword(input: { email: string }) {
+  const res = await apiFetch<{ resetToken?: string }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  if (!res.success) throw new Error(res.message || "Failed to send reset link");
   return res.data;
 }
 
@@ -232,6 +247,20 @@ export async function createCampaign(
   });
 }
 
+// ---------- Update Campaign (backend) ----------
+export async function updateCampaign(
+  id: string,
+  input: Partial<CreateCampaignInput>,
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ campaign: any }>(`/campaigns/${id}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Upload Image (Cloudinary via backend) ----------
 export async function uploadImage(
   payload: { file?: string; url?: string; folder?: string },
@@ -244,6 +273,25 @@ export async function uploadImage(
     headers,
     body: JSON.stringify(payload),
   });
+}
+
+// ---------- Payments: Paystack Card Initialize ----------
+export async function initPaystackCard(input: {
+  campaignId: string;
+  amount: number; // Naira
+  email: string;
+  donorName?: string;
+  isAnonymous?: boolean;
+  message?: string;
+  callbackUrl?: string;
+}) {
+  return apiFetch<{ authorizationUrl: string; reference: string; donationId: string }>(
+    `/payments/paystack/initialize`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
 }
 
 // ---------- Comments ----------
