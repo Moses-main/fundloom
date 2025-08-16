@@ -136,6 +136,29 @@ export async function getCampaignDetails(id: string) {
   }>(`/campaigns/${id}`);
 }
 
+// List campaigns with optional filters/pagination
+export async function getCampaigns(params?: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  search?: string;
+  status?: "active" | "completed" | "all";
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.category) q.set("category", params.category);
+  if (params?.search) q.set("search", params.search);
+  if (params?.status) q.set("status", params.status);
+  if (params?.sortBy) q.set("sortBy", params.sortBy);
+  if (params?.sortOrder) q.set("sortOrder", params.sortOrder);
+  const qs = q.toString();
+  const path = qs ? `/campaigns?${qs}` : "/campaigns";
+  return apiFetch<{ campaigns: any[]; pagination: any }>(path);
+}
+
 export async function getCampaignComments(
   campaignId: string,
   page = 1,

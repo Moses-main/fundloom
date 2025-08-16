@@ -12,6 +12,7 @@ import {
   createComment as apiCreateComment,
   getCampaignDetails,
   getCampaignComments,
+  getCampaigns,
 } from "../lib/api";
 
 /* ---------- Types (same as your single-file app) ---------- */
@@ -269,10 +270,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [activeTab, setActiveTab] =
     useState<AppContextType["activeTab"]>("campaigns");
 
-  // persisted states
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
-    readJSON<Campaign[]>(LS_KEYS.campaigns, SEED_CAMPAIGNS)
-  );
+  // campaigns now sourced from backend (seed shown initially)
+  const [campaigns, setCampaigns] = useState<Campaign[]>(SEED_CAMPAIGNS);
   // Donations and comments now live in memory only for UI and are persisted to backend via API
   const [donations, setDonations] = useState<Donation[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -324,11 +323,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch {}
   };
 
-  // persist to localStorage
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.campaigns, JSON.stringify(campaigns));
-  }, [campaigns]);
-  // Removed localStorage persistence for donations and comments to ensure backend is the source of truth
+  // Removed localStorage persistence for campaigns, donations, and comments
 
   // One-time migration: backfill images for campaigns loaded from older localStorage
   useEffect(() => {
@@ -347,6 +342,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setCampaigns(updated);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch campaigns from backend on mount and map to UI shape
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCampaigns = async () => {
+      try {
+        const res = await getCampaigns({ page: 1, limit: 12, status: "active" });
+        if (!res?.success || !(res as any).data) return;
+        const { campaigns: list } = (res as any).data as { campaigns: any[] };
+        const mapped: Campaign[] = (list || []).map((bc, idx) => ({
+          id: Date.now() + idx, // UI-local id for selection/share
+          charity_address: bc.charityAddress || bc.creator?.walletAddress || "0x0",
+          title: bc.title,
+          description: bc.description,
+          target_amount: bc.targetAmount,
+          raised_amount: bc.raisedAmount ?? 0,
+          deadline: new Date(bc.deadline).getTime(),
+          is_active: bc.isActive ?? true,
+          created_at: new Date(bc.createdAt).getTime(),
+          total_donors: bc.totalDonors ?? 0,
+          image: bc.image || null,
+          category: bc.category,
+          template: bc.template || "default",
+          funds_used: bc.fundsUsed ? Object.fromEntries(Object.entries(bc.fundsUsed)) : {},
+          // @ts-ignore attach backend id for downstream operations
+          backendId: bc._id,
+        }));
+        if (!cancelled && mapped.length) {
+          // Merge: backend campaigns first, then any existing (seed) that don't have backendId
+          setCampaigns((prev) => {
+            const nonBackend = prev.filter((c: any) => !c.backendId);
+            return [...mapped, ...nonBackend];
+          });
+        }
+      } catch (e) {
+        // Silently ignore; UI continues with seed
+      }
+    };
+    fetchCampaigns();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch backend details when selecting a backend-backed campaign
