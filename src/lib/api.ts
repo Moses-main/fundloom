@@ -4,7 +4,9 @@
 function detectDefaultBase(): string {
   try {
     if (typeof window !== "undefined") {
-      const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+      const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(
+        window.location.hostname
+      );
       if (isLocal) {
         // Prefer 5001 for local backend if not overridden via env
         return `${window.location.protocol}//${window.location.hostname}:5001/api/v1`;
@@ -17,7 +19,8 @@ function detectDefaultBase(): string {
 const DEFAULT_API_BASE = detectDefaultBase();
 
 const rawBase =
-  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE_URL) ||
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env?.VITE_API_BASE_URL) ||
   DEFAULT_API_BASE;
 
 // Normalize: remove trailing slashes
@@ -34,7 +37,10 @@ export interface ApiResponse<T> {
   data?: T;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiResponse<T>> {
   const url = joinUrl(API_BASE_URL, path);
   const res = await fetch(url, {
     headers: {
@@ -46,7 +52,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<Api
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message =
-      body?.message || body?.error || `Request failed (${res.status}) for ${url}`;
+      body?.message ||
+      body?.error ||
+      `Request failed (${res.status}) for ${url}`;
     throw new Error(message);
   }
   return body as ApiResponse<T>;
@@ -74,11 +82,15 @@ export async function registerUser(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
-  if (!res.success || !res.data) throw new Error(res.message || "Registration failed");
+  if (!res.success || !res.data)
+    throw new Error(res.message || "Registration failed");
   return res.data;
 }
 
-export async function loginUser(input: { email: string; password: string }): Promise<AuthPayload> {
+export async function loginUser(input: {
+  email: string;
+  password: string;
+}): Promise<AuthPayload> {
   const res = await apiFetch<AuthPayload>("/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
@@ -95,4 +107,99 @@ export function setAuth(auth: AuthPayload) {
 export function clearAuth() {
   localStorage.removeItem("auth_token");
   localStorage.removeItem("auth_user");
+}
+
+// ---------- Backend data types (subset) ----------
+export type BackendDonation = {
+  _id: string;
+  amount: number;
+  message?: string;
+  isAnonymous?: boolean;
+  donorName?: string;
+  donor?: { name?: string } | null;
+  createdAt: string;
+};
+
+export type BackendComment = {
+  id: string;
+  authorName?: string;
+  message: string;
+  createdAt: string;
+};
+
+// ---------- Helpers used by AppContext ----------
+export async function getCampaignDetails(id: string) {
+  return apiFetch<{
+    campaign: any;
+    stats?: any;
+    recentDonations?: BackendDonation[];
+  }>(`/campaigns/${id}`);
+}
+
+export async function getCampaignComments(
+  campaignId: string,
+  page = 1,
+  limit = 20
+) {
+  const q = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  }).toString();
+  return apiFetch<{ comments: BackendComment[] }>(
+    `/comments/campaign/${campaignId}?${q}`
+  );
+}
+
+export async function postGuestDonation(input: {
+  campaignId: string;
+  amount: number;
+  paymentMethod: "crypto" | "card" | "bank" | "mobile";
+  message?: string;
+  isAnonymous?: boolean;
+  donorName?: string;
+  donorEmail?: string;
+}) {
+  return apiFetch<{ donation: any }>(`/donations/guest`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// ---------- Create Campaign (backend) ----------
+export type CreateCampaignInput = {
+  title: string;
+  description: string;
+  category: string;
+  targetAmount: number;
+  deadline: string; // ISO date string
+  image?: string | null;
+  template?: "default" | "impact" | "medical" | "creative";
+  charityAddress?: string;
+};
+
+export async function createCampaign(
+  input: CreateCampaignInput,
+  token?: string
+) {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return apiFetch<{ campaign: any }>(`/campaigns`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
+// ---------- Upload Image (Cloudinary via backend) ----------
+export async function uploadImage(
+  payload: { file?: string; url?: string; folder?: string },
+  token?: string
+) {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return apiFetch<{ publicId: string; url: string }>(`/uploads/image`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
 }

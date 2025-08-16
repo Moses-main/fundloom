@@ -20,7 +20,7 @@ const campaigns = [
     supporters: 1234,
     daysLeft: 23,
     category: "Social Impact",
-    image: "/placeholder-rcjq7.png",
+    image: "/students-coding.png",
   },
   {
     title: "Innovative Solar Panel Technology",
@@ -31,7 +31,7 @@ const campaigns = [
     supporters: 856,
     daysLeft: 45,
     category: "Technology",
-    image: "/modern-solar-rooftop.png",
+    image: "/students-tablets-learning.png",
   },
   {
     title: "Local Art Studio Expansion",
@@ -42,7 +42,7 @@ const campaigns = [
     supporters: 189,
     daysLeft: 12,
     category: "Arts & Culture",
-    image: "/bright-art-studio.png",
+    image: "/students-coding.png",
   },
 ];
 

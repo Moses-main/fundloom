@@ -12,14 +12,26 @@ const CampaignDetail: React.FC = () => {
     copyShareLink,
     buildSocialLinks,
     setActiveTab,
-  } = useAppContext();
+    // backend-aware
+    detailsLoading,
+    detailsError,
+  } = useAppContext() as any;
   if (!selectedCampaign) return null;
+
+  const isBackend = !!(selectedCampaign as any).backendId;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+      {isBackend && detailsError && (
+        <div className="mb-3 p-2 rounded bg-red-50 text-red-700 text-sm border border-red-100">
+          {detailsError}
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row items-start gap-6">
         <div className="w-full lg:w-1/3">
-          {selectedCampaign.image ? (
+          {detailsLoading && isBackend ? (
+            <div className="h-56 sm:h-64 rounded-xl bg-gray-200 animate-pulse w-full" />
+          ) : selectedCampaign.image ? (
             <img
               src={selectedCampaign.image}
               alt={selectedCampaign.title}
@@ -31,21 +43,40 @@ const CampaignDetail: React.FC = () => {
         </div>
 
         <div className="flex-1 w-full">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {selectedCampaign.title}
-          </h2>
-          <p className="text-sm text-gray-600 mt-2">
-            {selectedCampaign.description}
-          </p>
+          {detailsLoading && isBackend ? (
+            <>
+              <div className="h-6 w-2/3 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-full bg-gray-200 rounded animate-pulse mt-3" />
+              <div className="h-3 w-5/6 bg-gray-200 rounded animate-pulse mt-2" />
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {selectedCampaign.title}
+              </h2>
+              <p className="text-sm text-gray-600 mt-2">
+                {selectedCampaign.description}
+              </p>
+            </>
+          )}
 
           <div className="mt-4">
             <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <span>{selectedCampaign.total_donors} donors</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span>{formatDate(selectedCampaign.created_at)}</span>
-              </div>
+              {detailsLoading && isBackend ? (
+                <>
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <span>{selectedCampaign.total_donors} donors</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span>{formatDate(selectedCampaign.created_at)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-4 w-full bg-gray-100 rounded-full h-3">
@@ -61,9 +92,15 @@ const CampaignDetail: React.FC = () => {
             </div>
 
             <div className="mt-3 text-sm text-gray-700">
-              <strong>Raised:</strong> ₦
-              {formatAmount(selectedCampaign.raised_amount)} / ₦
-              {formatAmount(selectedCampaign.target_amount)}
+              {detailsLoading && isBackend ? (
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+              ) : (
+                <>
+                  <strong>Raised:</strong> ₦
+                  {formatAmount(selectedCampaign.raised_amount)} / ₦
+                  {formatAmount(selectedCampaign.target_amount)}
+                </>
+              )}
             </div>
 
             <div className="mt-4 flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
@@ -110,7 +147,7 @@ const CampaignDetail: React.FC = () => {
                 className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm"
               >
                 <div className="text-gray-600">{k}</div>
-                <div className="mt-1 font-semibold">₦{v}</div>
+                <div className="mt-1 font-semibold">₦{formatAmount(v)}</div>
               </div>
             ))
           ) : (

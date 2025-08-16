@@ -154,6 +154,7 @@
 // src/components/CreateCampaignModal.tsx
 import React, { useState } from "react";
 import { useAppContext } from "../context/AppContext";
+import { createCampaign, uploadImage } from "../lib/api";
 
 const CreateCampaignModal: React.FC = () => {
   const {
@@ -168,6 +169,7 @@ const CreateCampaignModal: React.FC = () => {
   const [newTarget, setNewTarget] = useState("");
   const [newDeadline, setNewDeadline] = useState("");
   const [newImage, setNewImage] = useState<string | null>(null);
+  const [newImagePath, setNewImagePath] = useState<string>("");
   const [newCategory, setNewCategory] = useState("Charity");
   const [newTemplate, setNewTemplate] = useState("default");
 
@@ -178,34 +180,103 @@ const CreateCampaignModal: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newTitle || !newDescription || !newTarget || !newDeadline) {
       alert("Please fill all fields to create a campaign.");
       return;
     }
-    const nextId =
-      Math.max(
-        0,
-        ...(JSON.parse(localStorage.getItem("cc_campaigns_v1") || "[]")?.map(
-          (c: any) => c.id
-        ) || [0])
-      ) + 1;
+    let imageToUse = (newImagePath && newImagePath.trim()) || newImage || null;
+    // Require authentication for creation
+    const token = localStorage.getItem("auth_token") || undefined;
+    if (!token) {
+      alert("Please log in to create a campaign. Campaigns must be saved to the backend.");
+      return;
+    }
+    let backendCampaign: any | null = null;
+    if (token) {
+      try {
+        // If an image is provided, upload to Cloudinary first
+        if (imageToUse) {
+          try {
+            let payload: { file?: string; url?: string } = {};
+            if (newImage) {
+              payload = { file: newImage };
+            } else if (newImagePath.startsWith("http")) {
+              payload = { url: newImagePath };
+            } else {
+              // Relative public path: fetch and convert to data URL for upload
+              const rel = newImagePath.startsWith("/") ? newImagePath : "/" + newImagePath;
+              try {
+                const resp = await fetch(rel);
+                const blob = await resp.blob();
+                const toDataUrl = (b: Blob) =>
+                  new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result));
+                    reader.onerror = reject;
+                    reader.readAsDataURL(b);
+                  });
+                const dataUrl = await toDataUrl(blob);
+                payload = { file: dataUrl };
+              } catch (e) {
+                // Fallback to URL (may fail on Cloudinary due to localhost)
+                payload = { url: `${window.location.origin}${rel}` } as any;
+              }
+            }
+            const up = await uploadImage(payload, token);
+            const uploadedUrl = (up as any)?.data?.url;
+            if (uploadedUrl) imageToUse = uploadedUrl;
+          } catch (e) {
+            console.warn("Image upload failed, proceeding without Cloudinary URL:", (e as any)?.message || e);
+          }
+        }
+        const res = await createCampaign(
+          {
+            title: newTitle,
+            description: newDescription,
+            category: newCategory,
+            targetAmount: parseFloat(newTarget),
+            deadline: new Date(newDeadline).toISOString(),
+            image: imageToUse,
+            template: newTemplate as any,
+            charityAddress: userAddress || undefined,
+          },
+          token
+        );
+        backendCampaign = res?.data?.campaign || null;
+      } catch (e: any) {
+        console.error("Campaign creation failed:", e?.message || e);
+        alert(e?.message || "Failed to create campaign. Please try again.");
+        return;
+      }
+    }
+
+    // Ensure we have a backend campaign
+    if (!backendCampaign) {
+      alert("Failed to create campaign on the server. Please try again.");
+      return;
+    }
+
+    // Map backend campaign into local Campaign shape and update state
     const campaign = {
-      id: nextId,
-      charity_address: userAddress || "0x0",
-      title: newTitle,
-      description: newDescription,
-      target_amount: parseFloat(newTarget),
-      raised_amount: 0,
-      deadline: new Date(newDeadline).getTime(),
-      is_active: true,
-      created_at: Date.now(),
-      total_donors: 0,
-      image: newImage,
-      category: newCategory,
-      template: newTemplate,
-      funds_used: {},
-    };
+      id: Date.now(),
+      charity_address: backendCampaign.charityAddress || userAddress || "0x0",
+      title: backendCampaign.title,
+      description: backendCampaign.description,
+      target_amount: backendCampaign.targetAmount,
+      raised_amount: backendCampaign.raisedAmount ?? 0,
+      deadline: new Date(backendCampaign.deadline).getTime(),
+      is_active: backendCampaign.isActive ?? true,
+      created_at: new Date(backendCampaign.createdAt).getTime(),
+      total_donors: backendCampaign.totalDonors ?? 0,
+      image: backendCampaign.image || imageToUse,
+      category: backendCampaign.category,
+      template: backendCampaign.template || newTemplate,
+      funds_used: Object.fromEntries(
+        backendCampaign.fundsUsed ? Array.from(Object.entries(backendCampaign.fundsUsed)) : []
+      ),
+      backendId: backendCampaign._id,
+    } as any;
     setCampaigns((prev: any) => [campaign, ...prev]);
     setNewTitle("");
     setNewDescription("");
@@ -341,6 +412,17 @@ const CreateCampaignModal: React.FC = () => {
                 className="mt-3 rounded-lg w-full h-36 object-cover"
               />
             )}
+            <div className="mt-3">
+              <label className="block text-xs text-gray-600 mb-1">
+                Or use a public image path or URL (e.g. /students-coding.png)
+              </label>
+              <input
+                value={newImagePath}
+                onChange={(e) => setNewImagePath(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="/your-public-image.png or https://..."
+              />
+            </div>
           </div>
 
           <div className="flex space-x-3 mt-2">

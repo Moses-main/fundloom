@@ -9,6 +9,8 @@ import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
 import { WalletConnectorModal } from "@/components/modal/WalletConnector";
 import { useAccount as useStarknetAccount } from "@starknet-react/core";
+import { Connector, useConnect } from "@starknet-react/core";
+import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
 
 interface WalletOption {
   id: string;
@@ -16,6 +18,7 @@ interface WalletOption {
   icon: string;
   description: string;
   popular?: boolean;
+  disabled?: boolean;
 }
 
 const walletOptions: WalletOption[] = [
@@ -31,12 +34,13 @@ const walletOptions: WalletOption[] = [
     name: "WalletConnect",
     icon: "🔗",
     description: "Connect with WalletConnect protocol (coming soon)",
+    disabled: true,
   },
   {
     id: "coinbase",
     name: "Coinbase Wallet",
     icon: "🔵",
-    description: "Connect using Coinbase Wallet (coming soon)",
+    description: "Connect using Coinbase Wallet",
   },
   {
     id: "starknet",
@@ -55,6 +59,10 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   const { address: starknetAddress } = useStarknetAccount();
+  const { connect, connectors } = useConnect();
+  const { starknetkitConnectModal } = useStarknetkitConnectModal({
+    connectors: connectors as StarknetkitConnector[],
+  });
 
   const navigate = useNavigate();
 
@@ -67,6 +75,65 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   }, [starknetAddress]);
 
+  // Detect existing EVM connection and react to account changes
+  useEffect(() => {
+    const ethAny = (window as any)?.ethereum;
+    if (!ethAny) return;
+    const providers: any[] = ethAny.providers?.length
+      ? ethAny.providers
+      : [ethAny];
+    const metamask =
+      providers.find((p) => p?.isMetaMask) ||
+      (ethAny.isMetaMask ? ethAny : null);
+    const coinbase =
+      providers.find((p) => p?.isCoinbaseWallet) ||
+      (ethAny.isCoinbaseWallet ? ethAny : null);
+    const sync = async () => {
+      try {
+        const [cb, mm]: any[] = await Promise.all([
+          coinbase?.request?.({ method: "eth_accounts" }).catch(() => []),
+          metamask?.request?.({ method: "eth_accounts" }).catch(() => []),
+        ]);
+        const cbAcc = cb && cb.length ? cb[0] : null;
+        const mmAcc = mm && mm.length ? mm[0] : null;
+        if (cbAcc) {
+          setEvmAddress(cbAcc);
+          setConnectedWallet((w) => w ?? "coinbase");
+        } else if (mmAcc) {
+          setEvmAddress(mmAcc);
+          setConnectedWallet((w) => w ?? "metamask");
+        }
+      } catch {}
+    };
+    sync();
+    const mmHandler = (accounts: string[]) => {
+      const acc = accounts && accounts.length ? accounts[0] : null;
+      if (acc) {
+        setEvmAddress(acc);
+        setConnectedWallet("metamask");
+      } else if (connectedWallet === "metamask") {
+        setEvmAddress(null);
+        setConnectedWallet(null);
+      }
+    };
+    const cbHandler = (accounts: string[]) => {
+      const acc = accounts && accounts.length ? accounts[0] : null;
+      if (acc) {
+        setEvmAddress(acc);
+        setConnectedWallet("coinbase");
+      } else if (connectedWallet === "coinbase") {
+        setEvmAddress(null);
+        setConnectedWallet(null);
+      }
+    };
+    metamask?.on?.("accountsChanged", mmHandler);
+    coinbase?.on?.("accountsChanged", cbHandler);
+    return () => {
+      metamask?.removeListener?.("accountsChanged", mmHandler);
+      coinbase?.removeListener?.("accountsChanged", cbHandler);
+    };
+  }, []);
+
   const isConnected = useMemo(
     () => !!evmAddress || !!starknetAddress,
     [evmAddress, starknetAddress]
@@ -78,7 +145,9 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       if (walletId === "metamask") {
         const eth = (window as any).ethereum;
         if (!eth || !eth.request) {
-          alert("MetaMask not detected. Please install MetaMask and try again.");
+          alert(
+            "MetaMask not detected. Please install MetaMask and try again."
+          );
           return;
         }
         const accounts: string[] = await eth.request({
@@ -91,11 +160,40 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         }
         return;
       }
-      if (walletId === "starknet") {
-        // Render modal-driven connect button below; here we no-op and let the user click modal
+      if (walletId === "coinbase") {
+        const ethAny = (window as any).ethereum;
+        const provider =
+          ethAny?.providers?.find?.((p: any) => p?.isCoinbaseWallet) ||
+          (ethAny?.isCoinbaseWallet ? ethAny : null);
+        if (!provider || !provider.request) {
+          alert(
+            "Coinbase Wallet not detected. Please install Coinbase Wallet extension and try again."
+          );
+          return;
+        }
+        const accounts: string[] = await provider.request({
+          method: "eth_requestAccounts",
+        });
+        if (accounts && accounts.length > 0) {
+          setEvmAddress(accounts[0]);
+          setConnectedWallet("coinbase");
+          navigate("/dashboard");
+        }
         return;
       }
-      alert("This wallet option is coming soon.");
+      if (walletId === "starknet") {
+        // Open StarkNet modal and connect
+        const { connector } = await starknetkitConnectModal();
+        if (connector) {
+          await connect({ connector: connector as Connector });
+          setConnectedWallet("starknet");
+          navigate("/dashboard");
+        }
+        return;
+      }
+      alert(
+        `${walletId} is not supported yet. Please use MetaMask, Coinbase, or StarkNet.`
+      );
     } catch (error) {
       console.error("Wallet connection error:", error);
     } finally {
@@ -110,9 +208,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   };
 
   if (isConnected) {
-    const wallet = walletOptions.find((w) => w.id === connectedWallet) || {
-      name: connectedWallet,
-    } as any;
+    const wallet =
+      walletOptions.find((w) => w.id === connectedWallet) ||
+      ({
+        name: connectedWallet,
+      } as any);
     return (
       <div className="space-y-4">
         <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
@@ -124,7 +224,9 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
                   Wallet Connected
                 </p>
                 <p className="text-sm text-green-600 dark:text-green-400">
-                  {wallet?.name} • {(evmAddress || starknetAddress)?.slice(0,6)}...{(evmAddress || starknetAddress)?.slice(-4)}
+                  {wallet?.name} •{" "}
+                  {(evmAddress || starknetAddress)?.slice(0, 6)}...
+                  {(evmAddress || starknetAddress)?.slice(-4)}
                 </p>
               </div>
             </div>
@@ -170,8 +272,14 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         {walletOptions.map((wallet) => (
           <Card
             key={wallet.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => connectWallet(wallet.id)}
+            className={`cursor-pointer hover:shadow-md transition-shadow ${
+              wallet.disabled
+                ? "opacity-60 cursor-not-allowed pointer-events-none"
+                : ""
+            }`}
+            onClick={() => {
+              if (!wallet.disabled) connectWallet(wallet.id);
+            }}
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -183,6 +291,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
                       {wallet.popular && (
                         <Badge variant="secondary" className="text-xs">
                           Popular
+                        </Badge>
+                      )}
+                      {wallet.disabled && (
+                        <Badge variant="secondary" className="text-xs">
+                          Soon
                         </Badge>
                       )}
                     </div>

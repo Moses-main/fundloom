@@ -16,8 +16,10 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({
   disabled = false
 }) => {
   const handleGoogleAuth = () => {
-    // Redirect to backend OAuth endpoint
-    window.location.href = `${API_BASE_URL}/auth/google`;
+    // Redirect to backend OAuth endpoint, include current origin as state for safe redirect
+    const origin = window.location.origin;
+    const state = encodeURIComponent(origin);
+    window.location.href = `${API_BASE_URL}/auth/google?state=${state}`;
   };
 
   const handleGoogleTokenAuth = async (googleToken: string) => {
