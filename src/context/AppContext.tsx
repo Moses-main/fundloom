@@ -6,6 +6,13 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import {
+  postGuestDonation,
+  postAuthDonation,
+  createComment as apiCreateComment,
+  getCampaignDetails,
+  getCampaignComments,
+} from "../lib/api";
 
 /* ---------- Types (same as your single-file app) ---------- */
 export type PaymentMethod = "crypto" | "card" | "bank" | "mobile";
@@ -239,6 +246,11 @@ export interface AppContextType {
     total: number;
     count: number;
   }[];
+  // backend details for selected backend campaign
+  detailsLoading?: boolean;
+  detailsError?: string | null;
+  backendRecentDonations?: any[];
+  backendComments?: any[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -261,12 +273,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [campaigns, setCampaigns] = useState<Campaign[]>(() =>
     readJSON<Campaign[]>(LS_KEYS.campaigns, SEED_CAMPAIGNS)
   );
-  const [donations, setDonations] = useState<Donation[]>(() =>
-    readJSON<Donation[]>(LS_KEYS.donations, SEED_DONATIONS)
-  );
-  const [comments, setComments] = useState<Comment[]>(() =>
-    readJSON<Comment[]>(LS_KEYS.comments, SEED_COMMENTS)
-  );
+  // Donations and comments now live in memory only for UI and are persisted to backend via API
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
 
   // UI states
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
@@ -285,16 +294,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [selectedPayment, setSelectedPayment] =
     useState<PaymentMethod>("crypto");
 
+  // Backend-driven details for selected campaign
+  const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [backendRecentDonations, setBackendRecentDonations] = useState<any[] | undefined>(undefined);
+  const [backendComments, setBackendComments] = useState<any[] | undefined>(undefined);
+
+  // Quick refresh helper for backend campaign details
+  const refreshBackendDetails = async (backendId: string) => {
+    try {
+      const details = await getCampaignDetails(String(backendId));
+      if (details?.success && details.data) {
+        const { campaign, recentDonations } = details.data as any;
+        if (campaign && selectedCampaign) {
+          setCampaigns((prev) =>
+            prev.map((c) =>
+              c.id === selectedCampaign.id
+                ? {
+                    ...c,
+                    raised_amount: campaign.raisedAmount ?? c.raised_amount,
+                    total_donors: campaign.totalDonors ?? c.total_donors,
+                  }
+                : c
+            )
+          );
+        }
+        setBackendRecentDonations(recentDonations || []);
+      }
+    } catch {}
+  };
+
   // persist to localStorage
   useEffect(() => {
     localStorage.setItem(LS_KEYS.campaigns, JSON.stringify(campaigns));
   }, [campaigns]);
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.donations, JSON.stringify(donations));
-  }, [donations]);
-  useEffect(() => {
-    localStorage.setItem(LS_KEYS.comments, JSON.stringify(comments));
-  }, [comments]);
+  // Removed localStorage persistence for donations and comments to ensure backend is the source of truth
 
   // One-time migration: backfill images for campaigns loaded from older localStorage
   useEffect(() => {
@@ -314,6 +348,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch backend details when selecting a backend-backed campaign
+  useEffect(() => {
+    const run = async () => {
+      setDetailsError(null);
+      setBackendRecentDonations(undefined);
+      setBackendComments(undefined);
+      if (!selectedCampaign) return;
+      const backendId = (selectedCampaign as any).backendId || (selectedCampaign as any)?._id;
+      if (!backendId) return; // local seed campaign
+      setDetailsLoading(true);
+      try {
+        const details = await getCampaignDetails(String(backendId));
+        if (details?.success && details.data) {
+          const { campaign, recentDonations } = details.data as any;
+          if (campaign) {
+            // Update derived stats on the UI campaign instance
+            setCampaigns((prev) =>
+              prev.map((c) =>
+                c.id === selectedCampaign.id
+                  ? {
+                      ...c,
+                      raised_amount: campaign.raisedAmount ?? c.raised_amount,
+                      total_donors: campaign.totalDonors ?? c.total_donors,
+                      // keep other UI fields
+                    }
+                  : c
+              )
+            );
+          }
+          setBackendRecentDonations(recentDonations || []);
+        }
+        // Fetch first page of comments for display
+        try {
+          const commentsRes = await getCampaignComments(String(backendId), 1, 20);
+          if (commentsRes?.success) setBackendComments((commentsRes.data as any)?.comments || []);
+        } catch {}
+      } catch (e: any) {
+        setDetailsError(e?.message || "Failed to load campaign details");
+      } finally {
+        setDetailsLoading(false);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCampaign?.id]);
 
   // Read initial tab from URL when on /dashboard
   useEffect(() => {
@@ -386,25 +466,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     Math.min((raised / target) * 100, 100);
 
   /* ---------------- donation logic (same as original) ---------------- */
-  const handleDonate = (simulateProcessing = true) => {
+  const handleDonate = async (simulateProcessing = true) => {
     if (!selectedCampaign || !donationAmount) return;
+    const amountNum = parseFloat(donationAmount);
+    if (isNaN(amountNum) || amountNum <= 0) return;
 
-    const newDonation: Donation = {
-      id: donations.length + 1,
-      donor_address:
-        userAddress || `anon-${Math.random().toString(36).slice(2, 8)}`,
-      donor_name: userName || undefined,
-      campaign_id: selectedCampaign.id,
-      amount: parseFloat(donationAmount),
-      timestamp: Date.now(),
-      donor_message: donationMessage,
-      payment_method: selectedPayment,
-    };
+    // We require a backend campaign ID to donate
+    const backendId = (selectedCampaign as any).backendId || (selectedCampaign as any)._id;
+    if (!backendId) {
+      alert("This campaign isn't synced with the server yet. Please create/select a server-backed campaign.");
+      return;
+    }
 
-    if (simulateProcessing && selectedPayment !== "crypto") {
-      setTimeout(() => completeDonation(newDonation), 900);
-    } else {
-      completeDonation(newDonation);
+    const token = localStorage.getItem("auth_token") || undefined;
+
+    try {
+      if (token) {
+        await postAuthDonation(
+          {
+            campaignId: String(backendId),
+            amount: amountNum,
+            paymentMethod: selectedPayment,
+            message: donationMessage || undefined,
+            isAnonymous: !userName,
+          },
+          token
+        );
+      } else {
+        await postGuestDonation({
+          campaignId: String(backendId),
+          amount: amountNum,
+          paymentMethod: selectedPayment,
+          message: donationMessage || undefined,
+          isAnonymous: !userName,
+          donorName: userName || undefined,
+        });
+      }
+
+      // For UI, reflect the donation locally (no localStorage persistence)
+      const uiDonation: Donation = {
+        id: donations.length + 1,
+        donor_address: userAddress || `anon-${Math.random().toString(36).slice(2, 8)}`,
+        donor_name: userName || undefined,
+        campaign_id: selectedCampaign.id,
+        amount: amountNum,
+        timestamp: Date.now(),
+        donor_message: donationMessage,
+        payment_method: selectedPayment,
+      };
+      if (simulateProcessing && selectedPayment !== "crypto") {
+        setTimeout(() => completeDonation(uiDonation), 600);
+        // background refresh for backend-backed campaign stats/donations
+        refreshBackendDetails(String(backendId));
+      } else {
+        completeDonation(uiDonation);
+        refreshBackendDetails(String(backendId));
+      }
+    } catch (e: any) {
+      alert(e?.message || "Donation failed. Please try again.");
     }
   };
 
@@ -488,17 +607,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   /* -------------------- comments -------------------------- */
-  const addComment = (campaignId: number) => {
+  const addComment = async (campaignId: number) => {
     if (!commentDraft) return;
-    const comment: Comment = {
-      id: comments.length + 1,
-      campaign_id: campaignId,
-      author: userName || userAddress || "Guest",
-      message: commentDraft,
-      timestamp: Date.now(),
-    };
-    setComments((s) => [...s, comment]);
-    setCommentDraft("");
+    const backendId = (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
+    if (!backendId) {
+      alert("This campaign isn't synced with the server. Cannot post comment.");
+      return;
+    }
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      alert("Please log in to comment.");
+      return;
+    }
+    try {
+      await apiCreateComment(String(backendId), { message: commentDraft }, token);
+      // Re-fetch backend comments to reflect the new comment accurately
+      try {
+        const commentsRes = await getCampaignComments(String(backendId), 1, 20);
+        if (commentsRes?.success)
+          setBackendComments((commentsRes.data as any)?.comments || []);
+      } catch {}
+      setCommentDraft("");
+    } catch (e: any) {
+      alert(e?.message || "Failed to post comment.");
+    }
   };
   const [commentDraft, setCommentDraft] = useState("");
 
@@ -562,6 +694,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     buildSocialLinks,
     addComment,
     leaderboard,
+    // backend details for selected backend campaign
+    detailsLoading,
+    detailsError,
+    backendRecentDonations,
+    backendComments,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

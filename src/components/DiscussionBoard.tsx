@@ -3,33 +3,65 @@ import React from "react";
 import { useAppContext } from "../context/AppContext";
 
 const DiscussionBoard: React.FC = () => {
+  const ctx = useAppContext() as any;
   const {
     comments,
     selectedCampaign,
     addComment,
     commentDraft,
     setCommentDraft,
-  } = useAppContext() as any;
+    detailsLoading,
+    detailsError,
+    backendComments,
+  } = ctx;
 
   if (!selectedCampaign) return null;
+
+  const isBackend = !!(selectedCampaign as any).backendId;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
       <h4 className="font-semibold text-gray-900 mb-4">Discussion</h4>
       <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
-        {comments
-          .filter((c: any) => c.campaign_id === selectedCampaign.id)
-          .map((c: any) => (
-            <div key={c.id} className="p-3 border border-gray-100 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">{c.author}</div>
-                <div className="text-xs text-gray-400">
-                  {new Date(c.timestamp).toLocaleDateString()}
+        {isBackend ? (
+          detailsLoading ? (
+            <>
+              <div className="h-12 bg-gray-100 rounded animate-pulse" />
+              <div className="h-12 bg-gray-100 rounded animate-pulse" />
+              <div className="h-12 bg-gray-100 rounded animate-pulse" />
+            </>
+          ) : detailsError ? (
+            <div className="text-sm text-red-600">{detailsError}</div>
+          ) : backendComments && backendComments.length > 0 ? (
+            backendComments.map((c: any) => (
+              <div key={c._id || c.id} className="p-3 border border-gray-100 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">{c.authorName || c.author?.name || "User"}</div>
+                  <div className="text-xs text-gray-400">
+                    {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ""}
+                  </div>
                 </div>
+                <div className="text-sm text-gray-700 mt-1">{c.message}</div>
               </div>
-              <div className="text-sm text-gray-700 mt-1">{c.message}</div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="text-sm text-gray-500">No comments yet.</div>
+          )
+        ) : (
+          comments
+            .filter((c: any) => c.campaign_id === selectedCampaign.id)
+            .map((c: any) => (
+              <div key={c.id} className="p-3 border border-gray-100 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">{c.author}</div>
+                  <div className="text-xs text-gray-400">
+                    {new Date(c.timestamp).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="text-sm text-gray-700 mt-1">{c.message}</div>
+              </div>
+            ))
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">

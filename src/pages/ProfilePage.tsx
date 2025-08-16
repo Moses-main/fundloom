@@ -61,10 +61,39 @@ const ProfilePage: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    // Here you can connect an API call to save changes
-    setIsEditing(false);
-    console.log("Profile saved:", profile);
+  const handleSave = async () => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      alert("Please log in to save your profile.");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profile.name,
+          bio: profile.bio,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message || "Failed to update profile");
+      // Update local storage auth_user minimal info
+      try {
+        const raw = localStorage.getItem("auth_user");
+        if (raw) {
+          const u = JSON.parse(raw);
+          u.name = profile.name || u.name;
+          localStorage.setItem("auth_user", JSON.stringify(u));
+        }
+      } catch {}
+      setIsEditing(false);
+    } catch (e: any) {
+      alert(e?.message || "Unable to save profile");
+    }
   };
 
   // Load the authenticated user from backend
@@ -258,12 +287,30 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="mt-4">
             <Button
-              onClick={() =>
-                console.log("Saved preferences", {
-                  theme: resolvedTheme,
-                  prefEmailNotif,
-                })
-              }
+              onClick={async () => {
+                const token = localStorage.getItem("auth_token");
+                if (!token) {
+                  alert("Please log in to save preferences.");
+                  return;
+                }
+                try {
+                  const res = await fetch(`${API_BASE_URL}/users/profile`, {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      preferences: { emailNotifications: prefEmailNotif },
+                    }),
+                  });
+                  const body = await res.json();
+                  if (!res.ok)
+                    throw new Error(body?.message || "Failed to save preferences");
+                } catch (e: any) {
+                  alert(e?.message || "Unable to save preferences");
+                }
+              }}
             >
               Save Preferences
             </Button>

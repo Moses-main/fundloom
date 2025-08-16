@@ -165,6 +165,25 @@ export async function postGuestDonation(input: {
   });
 }
 
+// ---------- Authenticated donation (requires Bearer token) ----------
+export async function postAuthDonation(
+  input: {
+    campaignId: string;
+    amount: number;
+    paymentMethod: "crypto" | "card" | "bank" | "mobile";
+    message?: string;
+    isAnonymous?: boolean;
+  },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ donation: any }>(`/donations`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Create Campaign (backend) ----------
 export type CreateCampaignInput = {
   title: string;
@@ -201,5 +220,19 @@ export async function uploadImage(
     method: "POST",
     headers,
     body: JSON.stringify(payload),
+  });
+}
+
+// ---------- Comments ----------
+export async function createComment(
+  campaignId: string,
+  input: { message: string; isAnonymous?: boolean; parentCommentId?: string },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ comment: any }>(`/comments/campaign/${campaignId}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
   });
 }
