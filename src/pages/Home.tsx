@@ -5,6 +5,7 @@ import { FeaturesSection } from "../components/features-section";
 import { HowItWorksSection } from "../components/how-it-works-section";
 import { CampaignsShowcase } from "../components/campaigns-showcase";
 import { Footer } from "../components/footer";
+import { ProtocolSections } from "../components/protocol-sections";
 
 export default function HomePage() {
   return (
@@ -13,6 +14,7 @@ export default function HomePage() {
       <main>
         <HeroSection />
         <FeaturesSection />
+        <ProtocolSections />
         <HowItWorksSection />
         <CampaignsShowcase />
       </main>

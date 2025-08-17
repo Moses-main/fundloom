@@ -42,12 +42,16 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<ApiResponse<T>> {
   const url = joinUrl(API_BASE_URL, path);
+  // Build headers carefully so defaults are not overridden by a later spread of init
+  const defaultHeaders = new Headers({ "Content-Type": "application/json" });
+  if (init?.headers) {
+    const provided = new Headers(init.headers as HeadersInit);
+    provided.forEach((value, key) => defaultHeaders.set(key, value));
+  }
+  const { headers: _ignored, ...rest } = init || {};
   const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-    ...init,
+    ...rest,
+    headers: defaultHeaders,
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
