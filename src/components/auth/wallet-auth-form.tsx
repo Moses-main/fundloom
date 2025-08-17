@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
 import { WalletConnectorModal } from "@/components/modal/WalletConnector";
-import { useAccount as useStarknetAccount } from "@starknet-react/core";
+import { useAccount as useStarknetAccount, useDisconnect } from "@starknet-react/core";
 import { Connector, useConnect } from "@starknet-react/core";
 import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useAuth } from "@/context/AuthContext";
 
 interface WalletOption {
   id: string;
@@ -60,6 +61,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   const { address: starknetAddress } = useStarknetAccount();
+  const { disconnect: starknetDisconnect } = useDisconnect();
   const { connect, connectors } = useConnect();
   const { starknetkitConnectModal } = useStarknetkitConnectModal({
     connectors: connectors as StarknetkitConnector[],
@@ -67,15 +69,21 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const { show: toast } = useToast();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useAuth();
+  const next = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("next") || "/dashboard";
+  }, [location.search]);
 
   // If StarkNet is connected via modal, reflect it here
   useEffect(() => {
     if (starknetAddress) {
       setConnectedWallet("starknet");
       // Seamless onboarding: go to dashboard when connected
-      navigate("/dashboard");
+      navigate(next, { replace: true });
     }
-  }, [starknetAddress]);
+  }, [starknetAddress, next]);
 
   // Detect existing EVM connection and react to account changes
   useEffect(() => {
@@ -160,7 +168,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         if (accounts && accounts.length > 0) {
           setEvmAddress(accounts[0]);
           setConnectedWallet("metamask");
-          navigate("/dashboard");
+          navigate(next, { replace: true });
         }
         return;
       }
@@ -183,7 +191,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         if (accounts && accounts.length > 0) {
           setEvmAddress(accounts[0]);
           setConnectedWallet("coinbase");
-          navigate("/dashboard");
+          navigate(next, { replace: true });
         }
         return;
       }
@@ -193,7 +201,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         if (connector) {
           await connect({ connector: connector as Connector });
           setConnectedWallet("starknet");
-          navigate("/dashboard");
+          navigate(next, { replace: true });
         }
         return;
       }
@@ -209,10 +217,16 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = async () => {
     setConnectedWallet(null);
     setEvmAddress(null);
-    navigate("/");
+    try {
+      if (starknetAddress) {
+        await starknetDisconnect();
+      }
+    } catch {}
+    // Logout only clears JWT (if any) and navigates home; wallets handled above
+    await logout();
   };
 
   if (isConnected) {

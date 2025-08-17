@@ -10,12 +10,13 @@ export default function OAuthCallbackPage() {
     const params = new URLSearchParams(location.search);
     const token = params.get("token");
     const userStr = params.get("user");
+    const next = params.get("next") || "/dashboard";
 
     if (token && userStr) {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
         setAuth({ user, token });
-        navigate("/dashboard", { replace: true });
+        navigate(next, { replace: true });
         return;
       } catch (e) {
         // fallthrough to redirect with error

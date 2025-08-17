@@ -5,6 +5,8 @@ import HomePage from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
 import OAuthCallbackPage from "./pages/OAuthCallback";
 import { AppProvider } from "./context/AppContext";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/routing/ProtectedRoute";
 // import CampaignsPage from "./pages/CampaignsPage";
 // import CreateCampaignPage from "./pages/CreateCampaignPage";
 import ForgotWalletPage from "./pages/ForgotWallet";
@@ -24,25 +26,34 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="Fundloom-theme">
       <StarknetProvider>
         <ToastProvider>
-          <AppProvider>
-            <div className="min-h-screen bg-background">
-              <Header />
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-                <Route path="/campaigns" element={<CampaignsPage />} />
-                {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/feature" element={<FeaturePage />} />
-                <Route
-                  path="/profile"
-                  element={<Navigate to="/dashboard?tab=profile" replace />}
-                />
-                <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
-              </Routes>
-            </div>
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              <div className="min-h-screen bg-background">
+                <Header />
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+                  <Route path="/campaigns" element={<CampaignsPage />} />
+                  {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <DashboardPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/feature" element={<FeaturePage />} />
+                  <Route
+                    path="/profile"
+                    element={<Navigate to="/dashboard?tab=profile" replace />}
+                  />
+                  <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
+                </Routes>
+              </div>
+            </AppProvider>
+          </AuthProvider>
         </ToastProvider>
       </StarknetProvider>
     </ThemeProvider>

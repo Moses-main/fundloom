@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import * as z from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/Form";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
-import { registerUser, loginUser, setAuth, API_BASE_URL, forgotPassword } from "@/lib/api";
+import { forgotPassword } from "@/lib/api";
+import { loginWithEmail, registerWithEmail } from "@/services/auth/jwtAuth";
+import { startGoogleOAuth } from "@/services/auth/oauthAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 
 const loginSchema = z.object({
@@ -50,6 +52,7 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { show: toast } = useToast();
 
   const form = useForm<LoginFormData | SignupFormData>({
@@ -65,16 +68,16 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
     try {
       if (mode === "signup") {
         const { name, email, password } = data as SignupFormData;
-        const auth = await registerUser({ name, email, password });
-        setAuth(auth);
+        await registerWithEmail({ name, email, password });
         toast({ type: "success", title: "Account created", description: "Welcome to Fundloom" });
       } else {
         const { email, password } = data as LoginFormData;
-        const auth = await loginUser({ email, password });
-        setAuth(auth);
+        await loginWithEmail({ email, password });
         toast({ type: "success", title: "Signed in", description: "Login successful" });
       }
-      navigate("/dashboard");
+      const params = new URLSearchParams(location.search);
+      const next = params.get("next") || "/dashboard";
+      navigate(next, { replace: true });
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Authentication failed";
       console.error("Authentication error:", error);
@@ -87,9 +90,10 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const handleGoogleAuth = async () => {
     setIsOAuthLoading(true);
     try {
-      // Start Google OAuth via backend (Passport)
-      // Backend will redirect back to /auth/callback with token & user
-      window.location.href = `${API_BASE_URL}/auth/google`;
+      const params = new URLSearchParams(location.search);
+      const next = params.get("next") || "/dashboard";
+      // Start Google OAuth via backend (Passport) with next param
+      startGoogleOAuth(next);
     } catch (error) {
       console.error("Google OAuth error:", error);
     } finally {

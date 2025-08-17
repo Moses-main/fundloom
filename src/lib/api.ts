@@ -48,6 +48,14 @@ export async function apiFetch<T>(
     const provided = new Headers(init.headers as HeadersInit);
     provided.forEach((value, key) => defaultHeaders.set(key, value));
   }
+  // If Authorization was not provided, auto-attach JWT from localStorage when available
+  try {
+    const hasAuthHeader = defaultHeaders.has("Authorization");
+    if (!hasAuthHeader) {
+      const token = localStorage.getItem("auth_token");
+      if (token) defaultHeaders.set("Authorization", `Bearer ${token}`);
+    }
+  } catch {}
   const { headers: _ignored, ...rest } = init || {};
   const res = await fetch(url, {
     ...rest,
@@ -55,6 +63,18 @@ export async function apiFetch<T>(
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) {
+      try {
+        clearAuth();
+      } catch {}
+      try {
+        if (typeof window !== "undefined") {
+          const current = window.location.pathname + window.location.search;
+          const redirect = `/auth?reason=expired&next=${encodeURIComponent(current)}`;
+          window.location.replace(redirect);
+        }
+      } catch {}
+    }
     // Prefer specific validation error details when available
     const firstValidationError = Array.isArray(body?.errors) && body.errors.length > 0
       ? body.errors[0]?.message || body.errors[0]?.field

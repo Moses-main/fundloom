@@ -9,7 +9,7 @@ import { Menu, X, Zap, CheckCircle } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useAccount, useDisconnect } from "@starknet-react/core";
 import { WalletConnectorModal } from "../components/modal/WalletConnector";
-import { clearAuth } from "../lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,9 +17,10 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith("/dashboard");
   const { activeTab, setActiveTab } = useAppContext();
-  // Use StarkNet account state instead of mock wallet state
+  // Address for display only
   const { address: starknetAddress } = useAccount();
   const { disconnect: starknetDisconnect } = useDisconnect();
+  const { isAuthenticated: isAuthed, hasJwt, walletConnected, logout } = useAuth();
   // Detect EVM wallet (MetaMask) connection
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   useEffect(() => {
@@ -41,48 +42,21 @@ export const Header: React.FC = () => {
       eth.removeListener?.("accountsChanged", handler);
     };
   }, []);
-  const walletConnected = useMemo(
-    () => !!starknetAddress || !!evmAddress,
-    [starknetAddress, evmAddress]
-  );
-
-  // Determine if user is authenticated
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [hasJwt, setHasJwt] = useState(false);
-  useEffect(() => {
-    try {
-      const token = localStorage.getItem("auth_token");
-      const tokenPresent = !!token;
-      setHasJwt(tokenPresent);
-      setIsAuthed(tokenPresent || walletConnected);
-    } catch {
-      setIsAuthed(walletConnected);
-    }
-  }, [walletConnected, location.pathname]);
-
-  const handleLogout = () => {
-    clearAuth();
-    setHasJwt(false);
-    setIsAuthed(!!walletConnected);
-    // Navigate home and close menus
-    navigate("/");
+  // When user clicks logout or disconnect, call unified logout
+  const handleLogout = async () => {
+    await logout();
     setIsMenuOpen(false);
   };
-
   const handleDisconnectWallet = async () => {
     try {
       if (starknetAddress) {
         await starknetDisconnect();
       }
-      if (evmAddress) {
-        // Dapps cannot programmatically disconnect MetaMask; clear local state
-        setEvmAddress(null);
-      }
-    } catch (e) {
-      // no-op; ensure logout below still runs
-    } finally {
-      handleLogout();
-    }
+    } catch {}
+    // MetaMask/Coinbase cannot be force-disconnected; clear local state only
+    setEvmAddress(null);
+    setIsMenuOpen(false);
+    navigate("/");
   };
 
   return (
@@ -165,23 +139,17 @@ export const Header: React.FC = () => {
                         {(starknetAddress || evmAddress)?.slice(-4)}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDisconnectWallet}
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleDisconnectWallet}>
                       Disconnect
                     </Button>
                   </>
                 )}
-                {!walletConnected && hasJwt && (
+                {hasJwt && (
                   <Button variant="outline" size="sm" onClick={handleLogout}>
                     Logout
                   </Button>
                 )}
-                {!walletConnected && !hasJwt && !isAuthed && (
-                  <WalletConnectorModal />
-                )}
+                {!walletConnected && !hasJwt && !isAuthed && <WalletConnectorModal />}
               </div>
             ) : (
               <>
@@ -190,6 +158,11 @@ export const Header: React.FC = () => {
                     <Button variant="outline" size="sm" asChild>
                       <Link to="/profile">Profile</Link>
                     </Button>
+                    {walletConnected && (
+                      <Button variant="ghost" size="sm" onClick={handleDisconnectWallet}>
+                        Disconnect
+                      </Button>
+                    )}
                     {hasJwt && (
                       <Button variant="ghost" size="sm" onClick={handleLogout}>
                         Logout
@@ -278,7 +251,7 @@ export const Header: React.FC = () => {
                     </button>
                   ))}
                   <div className="pt-2 grid grid-cols-1 gap-2">
-                    {walletConnected ? (
+                    {walletConnected && (
                       <Button
                         variant="ghost"
                         className="w-full"
@@ -289,7 +262,8 @@ export const Header: React.FC = () => {
                       >
                         Disconnect Wallet
                       </Button>
-                    ) : hasJwt ? (
+                    )}
+                    {hasJwt && (
                       <Button
                         variant="outline"
                         className="w-full"
@@ -300,7 +274,8 @@ export const Header: React.FC = () => {
                       >
                         Logout
                       </Button>
-                    ) : (
+                    )}
+                    {!walletConnected && !hasJwt && (
                       <div className="w-full">
                         <WalletConnectorModal />
                       </div>
@@ -354,7 +329,7 @@ export const Header: React.FC = () => {
                         >
                           <Link to="/profile">Profile</Link>
                         </Button>
-                        {walletConnected ? (
+                        {walletConnected && (
                           <Button
                             variant="ghost"
                             className="w-full"
@@ -365,7 +340,8 @@ export const Header: React.FC = () => {
                           >
                             Disconnect Wallet
                           </Button>
-                        ) : (
+                        )}
+                        {hasJwt && (
                           <Button
                             variant="outline"
                             className="w-full"
