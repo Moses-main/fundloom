@@ -79,20 +79,23 @@ export const Header: React.FC = () => {
         <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
           {isDashboard ? (
             <div className="flex items-center gap-2">
-              {["campaigns", "donate", "profile"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                    ${
-                      activeTab === tab
-                        ? "bg-muted text-foreground"
-                        : "hover:bg-muted/60 text-muted-foreground"
-                    }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
+              {["overview", "donated", "profile", "campaigns"].map((tab) => {
+                const mapped = tab === "overview" ? "campaigns" : tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(mapped as any)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                      ${
+                        activeTab === mapped
+                          ? "bg-muted text-foreground"
+                          : "hover:bg-muted/60 text-muted-foreground"
+                      }`}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <>
@@ -259,20 +262,25 @@ export const Header: React.FC = () => {
               </div>
               {isDashboard ? (
                 <>
-                  {["campaigns", "donate", "profile"].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => {
-                        setActiveTab(tab as any);
-                        setIsMenuOpen(false);
-                      }}
-                      className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
-                        activeTab === tab ? "bg-muted/60" : ""
-                      }`}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
-                  ))}
+                  {["overview", "donated", "profile", "campaigns"].map(
+                    (tab) => {
+                      const mapped = tab === "overview" ? "campaigns" : tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => {
+                            setActiveTab(mapped as any);
+                            setIsMenuOpen(false);
+                          }}
+                          className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
+                            activeTab === mapped ? "bg-muted/60" : ""
+                          }`}
+                        >
+                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                        </button>
+                      );
+                    }
+                  )}
                   <div className="pt-2 grid grid-cols-1 gap-2">
                     {walletConnected && (
                       <Button

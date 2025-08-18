@@ -7,7 +7,7 @@ import ProfilePage from "../pages/ProfilePage";
 import DonationModal from "../components/DonationModal";
 import ThankYouModal from "../components/ThankYouModal";
 import CreateCampaignModal from "../components/CreateCampaignModal";
-
+import MyDonationsPage from "@/pages/MyDonationsPage";
 const Shell: React.FC = () => {
   const {
     activeTab,
@@ -21,7 +21,7 @@ const Shell: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === "campaigns" && <CampaignsPage />}
-        {activeTab === "donate" && selectedCampaign && <DonatePage />}
+        {activeTab === "donated" && <MyDonationsPage />}
         {activeTab === "profile" && <ProfilePage />}
       </main>
 

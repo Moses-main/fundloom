@@ -171,7 +171,7 @@ const SEED_COMMENTS: Comment[] = [
 
 /* ------------------- Context shape -------------------- */
 export interface AppContextType {
-  activeTab: "campaigns" | "donate" | "profile";
+  activeTab: "campaigns" | "donated" | "profile";
   setActiveTab: (t: AppContextType["activeTab"]) => void;
 
   campaigns: Campaign[];
@@ -282,8 +282,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Backend-driven details for selected campaign
   const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [backendRecentDonations, setBackendRecentDonations] = useState<any[] | undefined>(undefined);
-  const [backendComments, setBackendComments] = useState<any[] | undefined>(undefined);
+  const [backendRecentDonations, setBackendRecentDonations] = useState<
+    any[] | undefined
+  >(undefined);
+  const [backendComments, setBackendComments] = useState<any[] | undefined>(
+    undefined
+  );
   const { show: toast } = useToast();
   // guard to ensure we only auto-open once from URL param
   const [autoOpenHandled, setAutoOpenHandled] = useState<boolean>(false);
@@ -321,12 +325,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     let cancelled = false;
     const fetchCampaigns = async () => {
       try {
-        const res = await getCampaigns({ page: 1, limit: 12, status: "active" });
+        const res = await getCampaigns({
+          page: 1,
+          limit: 12,
+          status: "active",
+        });
         if (!res?.success || !(res as any).data) return;
         const { campaigns: list } = (res as any).data as { campaigns: any[] };
         const mapped: Campaign[] = (list || []).map((bc, idx) => ({
           id: Date.now() + idx, // UI-local id for selection/share
-          charity_address: bc.charityAddress || bc.creator?.walletAddress || "0x0",
+          charity_address:
+            bc.charityAddress || bc.creator?.walletAddress || "0x0",
           title: bc.title,
           description: bc.description,
           target_amount: bc.targetAmount,
@@ -338,7 +347,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           image: bc.image || null,
           category: bc.category,
           template: bc.template || "default",
-          funds_used: bc.fundsUsed ? Object.fromEntries(Object.entries(bc.fundsUsed)) : {},
+          funds_used: bc.fundsUsed
+            ? Object.fromEntries(Object.entries(bc.fundsUsed))
+            : {},
           // @ts-ignore attach backend id for downstream operations
           backendId: bc._id,
           // @ts-ignore creator id for ownership filtering
@@ -362,7 +373,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setBackendRecentDonations(undefined);
       setBackendComments(undefined);
       if (!selectedCampaign) return;
-      const backendId = (selectedCampaign as any).backendId || (selectedCampaign as any)?._id;
+      const backendId =
+        (selectedCampaign as any).backendId || (selectedCampaign as any)?._id;
       if (!backendId) return; // local seed campaign
       setDetailsLoading(true);
       try {
@@ -388,8 +400,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         // Fetch first page of comments for display
         try {
-          const commentsRes = await getCampaignComments(String(backendId), 1, 20);
-          if (commentsRes?.success) setBackendComments((commentsRes.data as any)?.comments || []);
+          const commentsRes = await getCampaignComments(
+            String(backendId),
+            1,
+            20
+          );
+          if (commentsRes?.success)
+            setBackendComments((commentsRes.data as any)?.comments || []);
         } catch {}
       } catch (e: any) {
         setDetailsError(e?.message || "Failed to load campaign details");
@@ -406,7 +423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (window.location.pathname.startsWith("/dashboard")) {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab") as AppContextType["activeTab"] | null;
-      if (tab && ["campaigns", "donate", "profile"].includes(tab)) {
+      if (tab && ["campaigns", "donated", "profile"].includes(tab)) {
         setActiveTab(tab);
       }
     }
@@ -478,9 +495,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isNaN(amountNum) || amountNum <= 0) return;
 
     // We require a backend campaign ID to donate
-    const backendId = (selectedCampaign as any).backendId || (selectedCampaign as any)._id;
+    const backendId =
+      (selectedCampaign as any).backendId || (selectedCampaign as any)._id;
     if (!backendId) {
-      toast({ type: "info", title: "Not synced", description: "Select a server-backed campaign to donate." });
+      toast({
+        type: "info",
+        title: "Not synced",
+        description: "Select a server-backed campaign to donate.",
+      });
       return;
     }
 
@@ -512,7 +534,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       // For UI, reflect the donation locally (no localStorage persistence)
       const uiDonation: Donation = {
         id: donations.length + 1,
-        donor_address: userAddress || `anon-${Math.random().toString(36).slice(2, 8)}`,
+        donor_address:
+          userAddress || `anon-${Math.random().toString(36).slice(2, 8)}`,
         donor_name: userName || undefined,
         campaign_id: selectedCampaign.id,
         amount: amountNum,
@@ -529,7 +552,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshBackendDetails(String(backendId));
       }
     } catch (e: any) {
-      toast({ type: "error", title: "Donation failed", description: e?.message || "Please try again." });
+      toast({
+        type: "error",
+        title: "Donation failed",
+        description: e?.message || "Please try again.",
+      });
     }
   };
 
@@ -591,7 +618,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const write = async () => {
         try {
           await navigator.clipboard.writeText(shareUrl);
-          toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
+          toast({
+            type: "success",
+            title: "Link copied",
+            description: "Share link copied to clipboard",
+          });
         } catch {
           // Fallback via temporary input
           const el = document.createElement("textarea");
@@ -602,9 +633,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           el.select();
           try {
             document.execCommand("copy");
-            toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
+            toast({
+              type: "success",
+              title: "Link copied",
+              description: "Share link copied to clipboard",
+            });
           } catch {
-            toast({ type: "warning", title: "Copy failed", description: "Unable to copy link. Please copy manually." });
+            toast({
+              type: "warning",
+              title: "Copy failed",
+              description: "Unable to copy link. Please copy manually.",
+            });
           } finally {
             document.body.removeChild(el);
           }
@@ -612,15 +651,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       write();
     } catch {
-      toast({ type: "warning", title: "Copy failed", description: "Unable to copy link. Please copy manually." });
+      toast({
+        type: "warning",
+        title: "Copy failed",
+        description: "Unable to copy link. Please copy manually.",
+      });
     }
   };
 
   const buildSocialLinks = (c: Campaign) => {
     const stableId = (c as any).backendId || (c as any)._id || c.id;
-    const base = `${window.location.origin + window.location.pathname}?campaign=${encodeURIComponent(
-      String(stableId)
-    )}`;
+    const base = `${
+      window.location.origin + window.location.pathname
+    }?campaign=${encodeURIComponent(String(stableId))}`;
     const text = encodeURIComponent(`${c.title} — ${c.description}`);
     return {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
@@ -641,18 +684,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   /* -------------------- comments -------------------------- */
   const addComment = async (campaignId: number) => {
     if (!commentDraft) return;
-    const backendId = (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
+    const backendId =
+      (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
     if (!backendId) {
-      toast({ type: "info", title: "Not synced", description: "Select a server-backed campaign to comment." });
+      toast({
+        type: "info",
+        title: "Not synced",
+        description: "Select a server-backed campaign to comment.",
+      });
       return;
     }
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      toast({ type: "info", title: "Login required", description: "Please log in to comment." });
+      toast({
+        type: "info",
+        title: "Login required",
+        description: "Please log in to comment.",
+      });
       return;
     }
     try {
-      await apiCreateComment(String(backendId), { message: commentDraft }, token);
+      await apiCreateComment(
+        String(backendId),
+        { message: commentDraft },
+        token
+      );
       // Re-fetch backend comments to reflect the new comment accurately
       try {
         const commentsRes = await getCampaignComments(String(backendId), 1, 20);
@@ -661,7 +717,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {}
       setCommentDraft("");
     } catch (e: any) {
-      toast({ type: "error", title: "Comment failed", description: e?.message || "Failed to post comment." });
+      toast({
+        type: "error",
+        title: "Comment failed",
+        description: e?.message || "Failed to post comment.",
+      });
     }
   };
   const [commentDraft, setCommentDraft] = useState("");
@@ -676,7 +736,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     // Try to match by backend id first (string), fall back to numeric local id
     let found: Campaign | undefined;
     // backend id match
-    found = campaigns.find((c: any) => String((c as any).backendId || (c as any)._id) === String(campaignParam));
+    found = campaigns.find(
+      (c: any) =>
+        String((c as any).backendId || (c as any)._id) === String(campaignParam)
+    );
     if (!found) {
       // try as numeric UI-local id
       const localId = parseInt(campaignParam, 10);

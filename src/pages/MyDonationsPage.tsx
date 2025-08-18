@@ -38,11 +38,16 @@ const MyDonationsPage: React.FC = () => {
       {loading && <p className="text-muted-foreground">Loading...</p>}
       {error && <p className="text-red-600">{error}</p>}
       {!loading && !error && donations.length === 0 && (
-        <p className="text-muted-foreground">You haven't made any donations yet.</p>
+        <p className="text-muted-foreground">
+          You haven't made any donations yet.
+        </p>
       )}
       <div className="space-y-4">
         {donations.map((d: any) => (
-          <div key={d._id} className="border border-border rounded-lg p-4 bg-card">
+          <div
+            key={d._id}
+            className="border border-border rounded-lg p-4 bg-card"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">
@@ -53,7 +58,9 @@ const MyDonationsPage: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-semibold">₦{Number(d.amount).toLocaleString()}</div>
+                <div className="font-semibold">
+                  ₦{Number(d.amount).toLocaleString()}
+                </div>
                 {d.message && (
                   <div className="text-sm text-muted-foreground max-w-md truncate">
                     "{d.message}"
