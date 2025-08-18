@@ -38,6 +38,7 @@ export interface Campaign {
   raised_amount: number;
   deadline: number;
   is_active: boolean;
+  is_verified?: boolean;
   created_at: number;
   total_donors: number;
   image?: string | null;
@@ -342,6 +343,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           raised_amount: bc.raisedAmount ?? 0,
           deadline: new Date(bc.deadline).getTime(),
           is_active: bc.isActive ?? true,
+          is_verified: Boolean(bc?.verification?.isVerified ?? false),
           created_at: new Date(bc.createdAt).getTime(),
           total_donors: bc.totalDonors ?? 0,
           image: bc.image || null,
@@ -494,6 +496,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   /* ---------------- donation logic (same as original) ---------------- */
   const handleDonate = async (simulateProcessing = true) => {
     if (!selectedCampaign || !donationAmount) return;
+    // Block donations if campaign is inactive or not approved
+    const inactive = !selectedCampaign.is_active;
+    const unapproved = (selectedCampaign as any).is_verified === false;
+    if (inactive || unapproved) {
+      toast({
+        type: "info",
+        title: "Donations disabled",
+        description: inactive
+          ? "This campaign is inactive. Donations are disabled."
+          : "This campaign is not approved yet. Donations are disabled.",
+      });
+      return;
+    }
     const amountNum = parseFloat(donationAmount);
     if (isNaN(amountNum) || amountNum <= 0) return;
 
@@ -750,6 +765,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     if (found) {
+      // block auto-open if inactive or not approved
+      const inactive = !found.is_active;
+      const unapproved = (found as any).is_verified === false;
+      if (inactive || unapproved) {
+        setAutoOpenHandled(true);
+        return;
+      }
       setSelectedCampaign(found);
       setShowDonationModal(true);
       setAutoOpenHandled(true);

@@ -247,6 +247,21 @@ export async function getCampaignComments(
   );
 }
 
+// Donations for a specific campaign (public, completed only)
+export async function getCampaignDonations(
+  campaignId: string,
+  page = 1,
+  limit = 20
+) {
+  const q = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  }).toString();
+  return apiFetch<{ donations: BackendDonation[]; pagination: any }>(
+    `/donations/campaign/${encodeURIComponent(campaignId)}?${q}`
+  );
+}
+
 export async function postGuestDonation(input: {
   campaignId: string;
   amount: number;
@@ -260,6 +275,17 @@ export async function postGuestDonation(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+// List donations made by the authenticated user
+export async function getMyDonations(params?: { page?: number; limit?: number; status?: string }) {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.status) q.set("status", params.status);
+  const qs = q.toString();
+  const path = qs ? `/donations/my-donations?${qs}` : "/donations/my-donations";
+  return apiFetch<{ donations: any[]; pagination: any }>(path, { method: "GET" });
 }
 
 // ---------- Authenticated donation (requires Bearer token) ----------

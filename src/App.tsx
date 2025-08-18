@@ -22,6 +22,7 @@ import { ToastProvider } from "./components/ui/ToastProvider";
 import DocsApi from "./pages/DocsApi";
 import DocsProtocol from "./pages/DocsProtocol";
 import AdminPage from "./pages/AdminPage";
+import CampaignDonorsPage from "./pages/CampaignDonorsPage";
 
 // testing with the entire application
 // import Entire from "./entireApp";
@@ -72,6 +73,14 @@ function App() {
                   />
                   <Route path="/feature" element={<FeaturePage />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route
+                    path="/campaigns/:id/donors"
+                    element={
+                      <ProtectedRoute>
+                        <CampaignDonorsPage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/profile"
                     element={<Navigate to="/dashboard?tab=profile" replace />}

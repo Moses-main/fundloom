@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { useToast } from "./ui/ToastProvider";
 import { uploadImage, updateCampaign } from "../lib/api";
+import { getCampaignDetails } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   const {
@@ -25,6 +28,8 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   } = useAppContext() as any;
   const { show: toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const onUploadClick = () => fileRef.current?.click();
 
@@ -222,15 +227,92 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         </div>
 
         <div className="mt-6 flex space-x-3">
-          <button
-            onClick={() => {
-              setSelectedCampaign(campaign);
-              setShowDonationModal(true);
-            }}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
-          >
-            Donate Now
-          </button>
+          {(() => {
+            const inactive = !campaign.is_active;
+            const unapproved = (campaign as any).is_verified === false;
+            const disabled = inactive || unapproved;
+            const btnClasses = `flex-1 py-3 rounded-xl font-medium transition-all shadow-lg ${
+              disabled
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 hover:shadow-xl"
+            }`;
+            return (
+              <button
+                disabled={disabled}
+                onClick={async () => {
+                  // Always re-check live backend status before allowing donation
+                  const backendId = (campaign as any).backendId || (campaign as any)._id;
+                  if (backendId) {
+                    try {
+                      const details = await getCampaignDetails(String(backendId));
+                      const bc = (details as any)?.data?.campaign;
+                      if (bc) {
+                        const nowInactive = bc.isActive === false;
+                        const nowUnapproved = Boolean(bc?.verification?.isVerified) === false;
+                        // reflect latest into UI state
+                        setCampaigns((prev: Campaign[]) =>
+                          prev.map((c) =>
+                            c.id === campaign.id
+                              ? {
+                                  ...c,
+                                  is_active: bc.isActive ?? c.is_active,
+                                  // @ts-ignore
+                                  is_verified: Boolean(bc?.verification?.isVerified ?? false),
+                                }
+                              : c
+                          )
+                        );
+                        if (nowInactive || nowUnapproved) {
+                          const reason = nowInactive
+                            ? "This campaign is inactive. Donations are disabled."
+                            : "This campaign is not approved yet. Donations are disabled.";
+                          toast({ type: "info", title: "Donations disabled", description: reason });
+                          return;
+                        }
+                      }
+                    } catch {
+                      // If check fails, be conservative: block and inform user
+                      toast({ type: "warning", title: "Unable to verify campaign status", description: "Please try again later." });
+                      return;
+                    }
+                  } else {
+                    // No backend id -> cannot accept donations
+                    toast({ type: "info", title: "Not available", description: "This campaign isn't available for donations yet." });
+                    return;
+                  }
+                  setSelectedCampaign(campaign);
+                  setShowDonationModal(true);
+                }}
+                className={btnClasses}
+              >
+                Donate Now
+              </button>
+            );
+          })()}
+
+          {(() => {
+            // Owner-only donors button
+            const creatorId = (campaign as any).creatorId;
+            const backendId = (campaign as any).backendId || (campaign as any)._id;
+            const isOwner = !!user?.id && !!creatorId && String(user.id) === String(creatorId);
+            if (!isOwner) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!backendId) {
+                    toast({ type: "info", title: "Not available", description: "This campaign isn't synced with the server yet." });
+                    return;
+                  }
+                  navigate(`/campaigns/${encodeURIComponent(String(backendId))}/donors`);
+                }}
+                className="px-4 py-3 rounded-xl font-medium bg-card border border-border hover:shadow-sm"
+                title="View donors"
+              >
+                View Donors
+              </button>
+            );
+          })()}
 
           <div className="flex items-center space-x-2">
             <button
