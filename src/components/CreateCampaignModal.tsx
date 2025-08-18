@@ -173,6 +173,7 @@ const CreateCampaignModal: React.FC = () => {
   const [newImagePath, setNewImagePath] = useState<string>("");
   const [newCategory, setNewCategory] = useState("Charity");
   const [newTemplate, setNewTemplate] = useState("default");
+  const [newCharityAddress, setNewCharityAddress] = useState("");
   const { show: toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -291,8 +292,10 @@ const CreateCampaignModal: React.FC = () => {
             : {}),
           template: newTemplate as any,
         };
-        if (userAddress && ethAddrRegex.test(userAddress)) {
-          payload.charityAddress = userAddress;
+        // Prefer manually supplied charity address if valid, otherwise fall back to connected userAddress
+        const candidateCharity = (newCharityAddress || "").trim() || userAddress;
+        if (candidateCharity && ethAddrRegex.test(candidateCharity)) {
+          payload.charityAddress = candidateCharity;
         }
         const res = await createCampaign(payload, token);
         backendCampaign = res?.data?.campaign || null;
@@ -347,13 +350,20 @@ const CreateCampaignModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-xl w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create a Campaign</h3>
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-2 sm:p-4 bg-black bg-opacity-50">
+      <div
+        className="relative bg-white dark:bg-gray-900 shadow-2xl w-full sm:max-w-xl sm:rounded-2xl rounded-none p-4 sm:p-6 h-full sm:h-auto max-h-screen sm:max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-campaign-title"
+      >
+        <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 mb-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 flex items-center justify-between">
+          <h3 id="create-campaign-title" className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Create a Campaign</h3>
           <button
             onClick={() => setShowCreateModal(false)}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-200"
+            className="text-2xl leading-none px-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+            aria-label="Close"
+            title="Close"
           >
             ×
           </button>
@@ -415,6 +425,24 @@ const CreateCampaignModal: React.FC = () => {
                 required
               />
             </div>
+          </div>
+
+          {/* Optional charity wallet address override */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              Charity Wallet Address (optional)
+            </label>
+            <input
+              value={newCharityAddress}
+              onChange={(e) => setNewCharityAddress(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
+              placeholder={userAddress ? `defaults to ${userAddress}` : "0x..."}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              If left empty, the connected wallet will be used as the charity address. You can paste a different EOA or multisig (Safe) here.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -524,19 +552,21 @@ const CreateCampaignModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex space-x-3 mt-2">
-            <button
-              onClick={handleCreate}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium"
-            >
-              Create
-            </button>
-            <button
-              onClick={() => setShowCreateModal(false)}
-              className="flex-1 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 py-3 rounded-xl font-medium"
-            >
-              Cancel
-            </button>
+          <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur mt-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <button
+                onClick={handleCreate}
+                className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="w-full sm:flex-1 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 py-3 rounded-xl font-medium"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>

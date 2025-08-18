@@ -42,8 +42,10 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<ApiResponse<T>> {
   const url = joinUrl(API_BASE_URL, path);
+  const isAuthPath = /^\/?auth\//i.test(path.replace(/^\/+/, ""));
   // Build headers carefully so defaults are not overridden by a later spread of init
   const defaultHeaders = new Headers({ "Content-Type": "application/json" });
+  let hadToken = false;
   if (init?.headers) {
     const provided = new Headers(init.headers as HeadersInit);
     provided.forEach((value, key) => defaultHeaders.set(key, value));
@@ -53,7 +55,12 @@ export async function apiFetch<T>(
     const hasAuthHeader = defaultHeaders.has("Authorization");
     if (!hasAuthHeader) {
       const token = localStorage.getItem("auth_token");
-      if (token) defaultHeaders.set("Authorization", `Bearer ${token}`);
+      if (token) {
+        defaultHeaders.set("Authorization", `Bearer ${token}`);
+        hadToken = true;
+      }
+    } else {
+      hadToken = true;
     }
   } catch {}
   const { headers: _ignored, ...rest } = init || {};
@@ -64,16 +71,24 @@ export async function apiFetch<T>(
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401) {
-      try {
-        clearAuth();
-      } catch {}
-      try {
-        if (typeof window !== "undefined") {
-          const current = window.location.pathname + window.location.search;
-          const redirect = `/auth?reason=expired&next=${encodeURIComponent(current)}`;
-          window.location.replace(redirect);
-        }
-      } catch {}
+      // Do not redirect for auth endpoints; surface the error to the form instead
+      if (!isAuthPath && hadToken) {
+        try {
+          clearAuth();
+        } catch {}
+        try {
+          if (typeof window !== "undefined") {
+            const currentPath = window.location.pathname;
+            // Avoid redirect loop or showing banner while user is already on auth page
+            if (!/^\/?auth(\/|$)/i.test(currentPath.replace(/^\/+/, ""))) {
+              const current = currentPath + window.location.search;
+              const redirect = `/auth?reason=expired&next=${encodeURIComponent(current)}`;
+              window.location.replace(redirect);
+            }
+          }
+        } catch {}
+      }
+      // For login/register/forgot or when no token existed, throw the error without redirect
     }
     // Prefer specific validation error details when available
     const firstValidationError = Array.isArray(body?.errors) && body.errors.length > 0

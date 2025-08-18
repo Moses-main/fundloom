@@ -20,7 +20,12 @@ export const Header: React.FC = () => {
   // Address for display only
   const { address: starknetAddress } = useAccount();
   const { disconnect: starknetDisconnect } = useDisconnect();
-  const { isAuthenticated: isAuthed, hasJwt, walletConnected, logout } = useAuth();
+  const {
+    isAuthenticated: isAuthed,
+    hasJwt,
+    walletConnected,
+    logout,
+  } = useAuth();
   // Detect EVM wallet (MetaMask) connection
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   useEffect(() => {
@@ -139,7 +144,11 @@ export const Header: React.FC = () => {
                         {(starknetAddress || evmAddress)?.slice(-4)}
                       </span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={handleDisconnectWallet}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDisconnectWallet}
+                    >
                       Disconnect
                     </Button>
                   </>
@@ -149,28 +158,42 @@ export const Header: React.FC = () => {
                     Logout
                   </Button>
                 )}
-                {!walletConnected && !hasJwt && !isAuthed && <WalletConnectorModal />}
+                {!walletConnected && !hasJwt && !isAuthed && (
+                  <WalletConnectorModal />
+                )}
               </div>
             ) : (
               <>
-                {isAuthed ? (
+                {hasJwt ? (
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" asChild>
                       <Link to="/profile">Profile</Link>
                     </Button>
                     {walletConnected && (
-                      <Button variant="ghost" size="sm" onClick={handleDisconnectWallet}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDisconnectWallet}
+                      >
                         Disconnect
                       </Button>
                     )}
-                    {hasJwt && (
-                      <Button variant="ghost" size="sm" onClick={handleLogout}>
-                        Logout
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" onClick={handleLogout}>
+                      Logout
+                    </Button>
                   </div>
                 ) : (
                   <>
+                    {walletConnected && (
+                      <></>
+                      // <Button
+                      //   variant="ghost"
+                      //   size="sm"
+                      //   onClick={handleDisconnectWallet}
+                      // >
+                      //   Disconnect
+                      // </Button>
+                    )}
                     <Button variant="ghost" size="sm" asChild>
                       <Link
                         to="/auth"
@@ -320,7 +343,7 @@ export const Header: React.FC = () => {
                     Pricing
                   </a>
                   <div className="pt-2 grid grid-cols-2 gap-2">
-                    {isAuthed ? (
+                    {hasJwt ? (
                       <>
                         <Button
                           className="w-full"
@@ -341,21 +364,31 @@ export const Header: React.FC = () => {
                             Disconnect Wallet
                           </Button>
                         )}
-                        {hasJwt && (
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              handleLogout();
-                            }}
-                          >
-                            Logout
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleLogout();
+                          }}
+                        >
+                          Logout
+                        </Button>
                       </>
                     ) : (
                       <>
+                        {walletConnected && (
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              handleDisconnectWallet();
+                            }}
+                          >
+                            Disconnect Wallet
+                          </Button>
+                        )}
                         <Button variant="outline" className="w-full" asChild>
                           <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                             Sign In
@@ -380,85 +413,3 @@ export const Header: React.FC = () => {
     </header>
   );
 };
-
-// src / components / Header.tsx;
-
-// import React from "react";
-// import { Heart, Wallet, CheckCircle } from "lucide-react";
-// import { useAppContext } from "../context/AppContext";
-
-// export const Header: React.FC = () => {
-//   const {
-//     activeTab,
-//     setActiveTab,
-//     walletConnected,
-//     connectWallet,
-//     disconnectWallet,
-//     userAddress,
-//   } = useAppContext();
-
-//   return (
-//     <header className="bg-white shadow-lg border-b border-gray-200">
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-//         <div className="flex justify-between items-center py-4">
-//           <div className="flex items-center space-x-3">
-//             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
-//               <Heart className="h-8 w-8 text-white" />
-//             </div>
-//             <div>
-//               <h1 className="text-2xl font-bold text-gray-900">CharityChain</h1>
-//               <p className="text-sm text-gray-600">
-//                 Transparent Giving, Verified Impact
-//               </p>
-//             </div>
-//           </div>
-
-//           <nav className="hidden md:flex space-x-8">
-//             {["campaigns", "donate", "charity", "profile"].map((tab) => (
-//               <button
-//                 key={tab}
-//                 onClick={() => setActiveTab(tab as any)}
-//                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-//                   activeTab === tab
-//                     ? "bg-blue-100 text-blue-700 shadow-sm"
-//                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-//                 }`}
-//               >
-//                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
-//               </button>
-//             ))}
-//           </nav>
-
-//           <div className="flex items-center space-x-4">
-//             {walletConnected ? (
-//               <div className="flex items-center space-x-3">
-//                 <div className="flex items-center space-x-2 bg-green-100 px-3 py-2 rounded-lg">
-//                   <CheckCircle className="h-4 w-4 text-green-600" />
-//                   <span className="text-sm font-medium text-green-800">
-//                     {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
-//                   </span>
-//                 </div>
-//                 <button
-//                   onClick={disconnectWallet}
-//                   className="text-sm text-gray-600 hover:text-gray-900"
-//                 >
-//                   Disconnect
-//                 </button>
-//               </div>
-//             ) : (
-//               <button
-//                 onClick={connectWallet}
-//                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2"
-//               >
-//                 <Wallet className="h-4 w-4" />
-//                 <span>Connect Wallet</span>
-//               </button>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </header>
-//   );
-// };
-
-// // export default Header;

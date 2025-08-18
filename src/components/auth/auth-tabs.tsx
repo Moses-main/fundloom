@@ -27,7 +27,7 @@ export function AuthTabs({ initialMode = "login" }: AuthTabsProps) {
     <Card className="w-full">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl">
+          <CardTitle className="text-xl">
             {authMode === "login" ? "Sign In" : "Create Account"}
           </CardTitle>
           <button
@@ -53,10 +53,10 @@ export function AuthTabs({ initialMode = "login" }: AuthTabsProps) {
             <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="wallet">Wallet</TabsTrigger>
           </TabsList>
-          <TabsContent value="email" className="mt-6">
+          <TabsContent value="email" className="mt-4">
             <EmailAuthForm mode={authMode} />
           </TabsContent>
-          <TabsContent value="wallet" className="mt-6">
+          <TabsContent value="wallet" className="mt-4">
             <WalletAuthForm mode={authMode} />
           </TabsContent>
         </Tabs>

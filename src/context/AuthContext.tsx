@@ -109,9 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isAuthenticated && onProtected) {
       navigate("/", { replace: true });
     }
-    if (isAuthenticated && location.pathname === "/auth") {
-      navigate("/dashboard", { replace: true });
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, location.pathname]);
 

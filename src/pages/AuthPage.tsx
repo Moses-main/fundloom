@@ -12,7 +12,7 @@ export default function AuthPage() {
   const reason = params.get("reason");
 
   return (
-    <div className="min-h-[80vh] max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-[70vh] max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {reason === "expired" && (
         <div className="mb-4 rounded-md border border-yellow-300 bg-yellow-50 text-yellow-800 px-3 py-2 text-sm">
           Your session expired. Please sign in again.
