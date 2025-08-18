@@ -50,7 +50,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const t = localStorage.getItem("auth_token");
       const u = localStorage.getItem("auth_user");
       setToken(t);
-      setUser(u ? JSON.parse(u) : null);
+      if (u) {
+        const parsed = JSON.parse(u);
+        const normalized = parsed && typeof parsed === "object" ? { ...parsed, id: parsed.id || parsed._id } : parsed;
+        setUser(normalized);
+      } else {
+        setUser(null);
+      }
     } catch {
       setToken(null);
       setUser(null);
@@ -64,7 +70,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const t = localStorage.getItem("auth_token");
           const u = localStorage.getItem("auth_user");
           setToken(t);
-          setUser(u ? JSON.parse(u) : null);
+          if (u) {
+            const parsed = JSON.parse(u);
+            const normalized = parsed && typeof parsed === "object" ? { ...parsed, id: parsed.id || parsed._id } : parsed;
+            setUser(normalized);
+          } else {
+            setUser(null);
+          }
         } catch {}
       }
     };
@@ -101,6 +113,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (walletConnected) return "wallet";
     return "none";
   })();
+
+  // If we have a token but user.id is missing, fetch /auth/me to hydrate
+  useEffect(() => {
+    const maybeHydrate = async () => {
+      if (!hasJwt) return;
+      if (user && (user as any).id) return;
+      try {
+        const res = await import("@/lib/api").then(m => m.getMe());
+        if (res?.success && (res as any).data?.user) {
+          const u = (res as any).data.user;
+          const normalized = { ...u, id: u.id || u._id };
+          // Persist and update state
+          try { localStorage.setItem("auth_user", JSON.stringify(normalized)); } catch {}
+          setUser(normalized);
+        }
+      } catch {}
+    };
+    maybeHydrate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasJwt, user?.id]);
 
   // Redirect logic: if user becomes unauthenticated on protected routes, send home. If authed on /auth, go dashboard.
   useEffect(() => {

@@ -19,6 +19,8 @@ import CampaignsPage from "./pages/CampaignsPage";
 import StarknetProvider from "./utils/starknetProvider";
 import FeaturePage from "./pages/Feature";
 import { ToastProvider } from "./components/ui/ToastProvider";
+import DocsApi from "./pages/DocsApi";
+import DocsProtocol from "./pages/DocsProtocol";
 
 // testing with the entire application
 // import Entire from "./entireApp";
@@ -39,6 +41,8 @@ function App() {
                     path="/auth/callback"
                     element={<OAuthCallbackPage />}
                   />
+                  <Route path="/docs/api" element={<DocsApi />} />
+                  <Route path="/docs/protocol" element={<DocsProtocol />} />
                   <Route path="/campaigns" element={<CampaignsPage />} />
                   {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
                   <Route

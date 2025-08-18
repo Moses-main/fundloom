@@ -83,7 +83,10 @@ export const Header: React.FC = () => {
                 return (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab as any)}
+                    onClick={() => {
+                      setActiveTab(tab as any);
+                      navigate(`/dashboard?tab=${tab}`);
+                    }}
                     className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors
                       ${
                         activeTab === tab
@@ -98,36 +101,30 @@ export const Header: React.FC = () => {
             </div>
           ) : (
             <>
-              <a
-                href="#features"
+              <Link
+                to="/"
                 className="text-sm font-medium hover:text-primary transition-colors"
               >
-                Features
-              </a>
+                Home
+              </Link>
+              <Link
+                to="/docs/api"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                API Docs
+              </Link>
+              <Link
+                to="/docs/protocol"
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Protocol
+              </Link>
               <Link
                 to="/feature"
                 className="text-sm font-medium hover:text-primary transition-colors"
               >
                 Feature Page
               </Link>
-              <a
-                href="#how-it-works"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                How It Works
-              </a>
-              <a
-                href="#campaigns"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Campaigns
-              </a>
-              <a
-                href="#pricing"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Pricing
-              </a>
             </>
           )}
         </nav>
@@ -267,6 +264,7 @@ export const Header: React.FC = () => {
                         key={tab}
                         onClick={() => {
                           setActiveTab(tab as any);
+                          navigate(`/dashboard?tab=${tab}`);
                           setIsMenuOpen(false);
                         }}
                         className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
@@ -311,13 +309,20 @@ export const Header: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <a
-                    href="#features"
+                  <Link
+                    to="/docs/api"
                     className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Features
-                  </a>
+                    API Docs
+                  </Link>
+                  <Link
+                    to="/docs/protocol"
+                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Protocol
+                  </Link>
                   <Link
                     to="/feature"
                     className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
@@ -325,27 +330,6 @@ export const Header: React.FC = () => {
                   >
                     Feature Page
                   </Link>
-                  <a
-                    href="#how-it-works"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    How It Works
-                  </a>
-                  <a
-                    href="#campaigns"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Campaigns
-                  </a>
-                  <a
-                    href="#pricing"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Pricing
-                  </a>
                   <div className="pt-2 grid grid-cols-2 gap-2">
                     {hasJwt ? (
                       <>

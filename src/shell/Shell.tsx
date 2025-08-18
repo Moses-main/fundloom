@@ -8,6 +8,9 @@ import ThankYouModal from "../components/ThankYouModal";
 import CreateCampaignModal from "../components/CreateCampaignModal";
 import MyDonationsPage from "@/pages/MyDonationsPage";
 import MyCampaignsPage from "@/pages/MyCampaignsPage";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/Button";
+import { Link } from "react-router-dom";
 
 const Shell: React.FC = () => {
   const {
@@ -17,6 +20,7 @@ const Shell: React.FC = () => {
     showCreateModal,
     selectedCampaign,
   } = useAppContext();
+  const { hasJwt, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -24,7 +28,22 @@ const Shell: React.FC = () => {
         {activeTab === "overview" && <CampaignsPage />}
         {activeTab === "donated" && <MyDonationsPage />}
         {activeTab === "profile" && <ProfilePage />}
-        {activeTab === "campaigns" && <MyCampaignsPage />}
+        {activeTab === "campaigns" && (
+          user?.id ? (
+            <MyCampaignsPage />
+          ) : hasJwt && !user?.id ? (
+            <p className="text-muted-foreground">Loading your account…</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-muted-foreground">
+                Please sign in to view campaigns you've created.
+              </p>
+              <Button asChild>
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            </div>
+          )
+        )}
       </main>
 
       {showDonationModal && selectedCampaign && <DonationModal />}

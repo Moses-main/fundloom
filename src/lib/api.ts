@@ -213,6 +213,26 @@ export async function getCampaigns(params?: {
   return apiFetch<{ campaigns: any[]; pagination: any }>(path);
 }
 
+// List campaigns created by a specific user
+export async function getCampaignsByUser(
+  userId: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    status?: "active" | "completed" | "all";
+  }
+) {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.status && params.status !== "all") q.set("status", params.status);
+  const qs = q.toString();
+  const path = qs
+    ? `/campaigns/user/${encodeURIComponent(userId)}?${qs}`
+    : `/campaigns/user/${encodeURIComponent(userId)}`;
+  return apiFetch<{ campaigns: any[]; pagination: any }>(path);
+}
+
 export async function getCampaignComments(
   campaignId: string,
   page = 1,

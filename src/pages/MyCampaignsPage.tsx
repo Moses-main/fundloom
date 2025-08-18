@@ -1,13 +1,14 @@
 // src/pages/MyCampaignsPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { getUserDashboard } from "@/lib/api";
+import { getCampaignsByUser } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import CampaignCard from "@/components/CampaignCard";
 import { useAppContext } from "@/context/AppContext";
 
 const MyCampaignsPage: React.FC = () => {
-  const { hasJwt } = useAuth();
+  const { hasJwt, user } = useAuth();
+  const userId = (user as any)?.id || (user as any)?._id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myCampaigns, setMyCampaigns] = useState<any[]>([]);
@@ -19,7 +20,8 @@ const MyCampaignsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await getUserDashboard();
+        if (!userId) throw new Error("Missing user id");
+        const res = await getCampaignsByUser(userId, { status: "all", limit: 50 });
         if (res?.success && (res as any).data) {
           const { campaigns } = (res as any).data as any;
           if (!cancelled) setMyCampaigns(campaigns || []);
@@ -30,11 +32,11 @@ const MyCampaignsPage: React.FC = () => {
         if (!cancelled) setLoading(false);
       }
     };
-    if (hasJwt) run();
+    if (hasJwt && userId) run();
     return () => {
       cancelled = true;
     };
-  }, [hasJwt]);
+  }, [hasJwt, userId]);
 
   const mapped = useMemo(() => {
     return (myCampaigns || []).map((bc: any, idx: number) => ({
