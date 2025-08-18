@@ -254,7 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   // tabs
   const [activeTab, setActiveTab] =
-    useState<AppContextType["activeTab"]>("campaigns");
+    useState<AppContextType["activeTab"]>("overview");
 
   // campaigns now sourced only from backend (no seed)
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);

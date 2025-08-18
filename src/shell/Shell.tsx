@@ -2,13 +2,13 @@
 import React from "react";
 import { useAppContext } from "../context/AppContext";
 import CampaignsPage from "../pages/CampaignsPage";
-import DonatePage from "../pages/DonatePage";
 import ProfilePage from "../pages/ProfilePage";
 import DonationModal from "../components/DonationModal";
 import ThankYouModal from "../components/ThankYouModal";
 import CreateCampaignModal from "../components/CreateCampaignModal";
 import MyDonationsPage from "@/pages/MyDonationsPage";
 import MyCampaignsPage from "@/pages/MyCampaignsPage";
+
 const Shell: React.FC = () => {
   const {
     activeTab,

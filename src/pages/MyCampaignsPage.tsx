@@ -4,12 +4,14 @@ import { getUserDashboard } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import CampaignCard from "@/components/CampaignCard";
+import { useAppContext } from "@/context/AppContext";
 
 const MyCampaignsPage: React.FC = () => {
   const { hasJwt } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [myCampaigns, setMyCampaigns] = useState<any[]>([]);
+  const { setShowCreateModal } = useAppContext();
 
   useEffect(() => {
     let cancelled = false;
@@ -64,9 +66,8 @@ const MyCampaignsPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Campaigns</h1>
         <Button
-          onClick={() =>
-            window.dispatchEvent(new CustomEvent("open-create-campaign"))
-          }
+          className="cursor-pointer"
+          onClick={() => setShowCreateModal(true)}
         >
           New Campaign
         </Button>
