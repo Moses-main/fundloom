@@ -9,7 +9,7 @@ import {
   Target,
 } from "lucide-react";
 import { useToast } from "./ui/ToastProvider";
-import { uploadImage, updateCampaign } from "../lib/api";
+import { uploadImage, updateCampaign, postCampaignWithdraw } from "../lib/api";
 import { getCampaignDetails } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -310,6 +310,68 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                 title="View donors"
               >
                 View Donors
+              </button>
+            );
+          })()}
+
+          {(() => {
+            // Owner-only withdraw button
+            const creatorId = (campaign as any).creatorId;
+            const backendId = (campaign as any).backendId || (campaign as any)._id;
+            const isOwner = !!user?.id && !!creatorId && String(user.id) === String(creatorId);
+            if (!isOwner) return null;
+
+            const goalMet = Number(campaign.raised_amount) >= Number(campaign.target_amount);
+            const deadlinePassed = (() => {
+              try {
+                const d = new Date(campaign.deadline);
+                return !isNaN(d.getTime()) && d.getTime() < Date.now();
+              } catch {
+                return false;
+              }
+            })();
+            const isWithdrawn = Boolean((campaign as any).is_withdrawn ?? (campaign as any).isWithdrawn);
+            const eligible = (goalMet || deadlinePassed) && !isWithdrawn;
+
+            if (!eligible) return null;
+
+            return (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!backendId) {
+                    toast({ type: "info", title: "Not available", description: "This campaign isn't synced with the server yet." });
+                    return;
+                  }
+                  try {
+                    const res = await postCampaignWithdraw(String(backendId));
+                    if (res?.success) {
+                      // Reflect in UI
+                      setCampaigns((prev: Campaign[]) =>
+                        prev.map((c) =>
+                          c.id === campaign.id
+                            ? {
+                                ...c,
+                                // mark withdrawn and deactivate
+                                // @ts-ignore
+                                is_withdrawn: true,
+                                is_active: false,
+                              }
+                            : c
+                        )
+                      );
+                      toast({ type: "success", title: "Withdrawal successful", description: "Funds have been withdrawn." });
+                    } else {
+                      throw new Error(res?.message || "Withdrawal failed");
+                    }
+                  } catch (err: any) {
+                    toast({ type: "error", title: "Withdrawal failed", description: err?.message || String(err) });
+                  }
+                }}
+                className="px-4 py-3 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700"
+                title="Withdraw funds"
+              >
+                Withdraw Funds
               </button>
             );
           })()}

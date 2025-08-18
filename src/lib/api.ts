@@ -346,6 +346,13 @@ export async function updateCampaign(
   });
 }
 
+// ---------- Withdraw Campaign Funds (creator only) ----------
+export async function postCampaignWithdraw(id: string) {
+  return apiFetch<{ campaign: any }>(`/campaigns/${encodeURIComponent(id)}/withdraw`, {
+    method: "POST",
+  });
+}
+
 // ---------- Upload Image (Cloudinary via backend) ----------
 export async function uploadImage(
   payload: { file?: string; url?: string; folder?: string },
