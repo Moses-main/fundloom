@@ -21,6 +21,7 @@ import FeaturePage from "./pages/Feature";
 import { ToastProvider } from "./components/ui/ToastProvider";
 import DocsApi from "./pages/DocsApi";
 import DocsProtocol from "./pages/DocsProtocol";
+import AdminPage from "./pages/AdminPage";
 
 // testing with the entire application
 // import Entire from "./entireApp";
@@ -70,6 +71,7 @@ function App() {
                     }
                   />
                   <Route path="/feature" element={<FeaturePage />} />
+                  <Route path="/admin" element={<AdminPage />} />
                   <Route
                     path="/profile"
                     element={<Navigate to="/dashboard?tab=profile" replace />}

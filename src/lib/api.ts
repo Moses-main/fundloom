@@ -411,3 +411,48 @@ export async function disconnectGoogle() {
     method: "POST",
   });
 }
+
+// ---------- Admin (Basic Auth) ----------
+export type BasicAuth = { basicToken: string }; // base64 of username:password
+
+function withBasic(init: RequestInit | undefined, basicToken: string): RequestInit {
+  const headers = new Headers((init?.headers as HeadersInit) || {});
+  headers.set("Authorization", `Basic ${basicToken}`);
+  return { ...(init || {}), headers };
+}
+
+export async function adminListCampaigns(params: { page?: number; limit?: number }, auth: BasicAuth) {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  const path = `/admin/campaigns${q.toString() ? `?${q.toString()}` : ""}`;
+  return apiFetch<{ campaigns: any[]; pagination: any }>(path, withBasic(undefined, auth.basicToken));
+}
+
+export async function adminApproveCampaign(id: string, auth: BasicAuth) {
+  return apiFetch<{ campaign: any }>(`/admin/campaigns/${id}/approve`, withBasic({ method: "PUT" }, auth.basicToken));
+}
+export async function adminActivateCampaign(id: string, auth: BasicAuth) {
+  return apiFetch<{ campaign: any }>(`/admin/campaigns/${id}/activate`, withBasic({ method: "PUT" }, auth.basicToken));
+}
+export async function adminDeactivateCampaign(id: string, auth: BasicAuth) {
+  return apiFetch<{ campaign: any }>(`/admin/campaigns/${id}/deactivate`, withBasic({ method: "PUT" }, auth.basicToken));
+}
+
+export async function adminListUsers(params: { page?: number; limit?: number; search?: string }, auth: BasicAuth) {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.search) q.set("search", params.search);
+  const path = `/admin/users${q.toString() ? `?${q.toString()}` : ""}`;
+  return apiFetch<{ users: any[]; pagination: any }>(path, withBasic(undefined, auth.basicToken));
+}
+export async function adminLockUser(id: string, auth: BasicAuth) {
+  return apiFetch<{ user: any }>(`/admin/users/${id}/lock`, withBasic({ method: "PUT" }, auth.basicToken));
+}
+export async function adminUnlockUser(id: string, auth: BasicAuth) {
+  return apiFetch<{ user: any }>(`/admin/users/${id}/unlock`, withBasic({ method: "PUT" }, auth.basicToken));
+}
+export async function adminDeleteUser(id: string, auth: BasicAuth) {
+  return apiFetch<{}>(`/admin/users/${id}`, withBasic({ method: "DELETE" }, auth.basicToken));
+}
