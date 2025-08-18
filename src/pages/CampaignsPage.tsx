@@ -5,11 +5,9 @@ import CampaignStats from "../components/CampaignStats";
 import SearchFilterBar from "../components/SearchFilterBar";
 import CampaignList from "../components/CampaignList";
 import Leaderboard from "../components/Leaderboard";
-import { useAuth } from "@/context/AuthContext";
 
 const CampaignsPage: React.FC = () => {
   const { campaigns, donations, leaderboard } = useAppContext();
-  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
@@ -19,9 +17,8 @@ const CampaignsPage: React.FC = () => {
   ];
   // filtered campaigns passed to CampaignList
   const filteredCampaigns = useMemo(() => {
-    const me = user?.id;
     return campaigns
-      .filter((c: any) => !!(c as any).backendId && c.is_active && (!me || (c as any).creatorId !== me))
+      .filter((c: any) => !!(c as any).backendId)
       .filter((c) => {
         const matchesSearch =
           c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,7 +27,7 @@ const CampaignsPage: React.FC = () => {
           categoryFilter === "All" || c.category === categoryFilter;
         return matchesSearch && matchesCategory;
       });
-  }, [campaigns, user?.id, searchTerm, categoryFilter]);
+  }, [campaigns, searchTerm, categoryFilter]);
 
   return (
     <div>

@@ -327,8 +327,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const res = await getCampaigns({
           page: 1,
-          limit: 12,
-          status: "active",
+          limit: 50,
+          status: "all",
         });
         if (!res?.success || !(res as any).data) return;
         const { campaigns: list } = (res as any).data as { campaigns: any[] };
@@ -612,7 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   /* ---------------- sharing / social --------------------- */
   const copyShareLink = (id: number) => {
     try {
-      const base = window.location.origin + window.location.pathname;
+      const base = `${window.location.origin}/`;
       // Try to resolve a stable backend id for this campaign id
       const campaign = campaigns.find((c) => c.id === id);
       const backendId = (campaign as any)?.backendId || (campaign as any)?._id;
@@ -664,9 +664,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const buildSocialLinks = (c: Campaign) => {
     const stableId = (c as any).backendId || (c as any)._id || c.id;
-    const base = `${
-      window.location.origin + window.location.pathname
-    }?campaign=${encodeURIComponent(String(stableId))}`;
+    const base = `${window.location.origin}/?campaign=${encodeURIComponent(String(stableId))}`;
     const text = encodeURIComponent(`${c.title} — ${c.description}`);
     return {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(

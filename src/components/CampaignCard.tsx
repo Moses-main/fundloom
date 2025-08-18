@@ -33,35 +33,66 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       if (!file) return;
       const MAX_BYTES = 5 * 1024 * 1024; // 5MB
       if (!file.type?.startsWith("image/")) {
-        toast({ type: "warning", title: "Invalid file", description: "Please select a valid image file." });
+        toast({
+          type: "warning",
+          title: "Invalid file",
+          description: "Please select a valid image file.",
+        });
         return;
       }
       if (file.size > MAX_BYTES) {
-        toast({ type: "warning", title: "Image too large", description: "Please choose an image under 5MB." });
+        toast({
+          type: "warning",
+          title: "Image too large",
+          description: "Please choose an image under 5MB.",
+        });
         return;
       }
       const token = localStorage.getItem("auth_token") || undefined;
       if (!token) {
-        toast({ type: "info", title: "Login required", description: "Please log in to update the campaign image." });
+        toast({
+          type: "info",
+          title: "Login required",
+          description: "Please log in to update the campaign image.",
+        });
         return;
       }
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUrl = String(e.target?.result || "");
         try {
-          const up = await uploadImage({ file: dataUrl, folder: "fundloom/campaigns" }, token);
+          const up = await uploadImage(
+            { file: dataUrl, folder: "fundloom/campaigns" },
+            token
+          );
           const newUrl = (up as any)?.data?.url;
           if (!newUrl) throw new Error("Upload failed");
           await updateCampaign(String(campaign.id), { image: newUrl }, token);
-          setCampaigns((prev: Campaign[]) => prev.map((c) => (c.id === campaign.id ? { ...c, image: newUrl } : c)));
-          toast({ type: "success", title: "Image updated", description: "Campaign cover image has been updated." });
+          setCampaigns((prev: Campaign[]) =>
+            prev.map((c) =>
+              c.id === campaign.id ? { ...c, image: newUrl } : c
+            )
+          );
+          toast({
+            type: "success",
+            title: "Image updated",
+            description: "Campaign cover image has been updated.",
+          });
         } catch (err: any) {
-          toast({ type: "error", title: "Failed to set image", description: err?.message || String(err) });
+          toast({
+            type: "error",
+            title: "Failed to set image",
+            description: err?.message || String(err),
+          });
         }
       };
       reader.readAsDataURL(file);
     } catch (e: any) {
-      toast({ type: "error", title: "Upload error", description: e?.message || String(e) });
+      toast({
+        type: "error",
+        title: "Upload error",
+        description: e?.message || String(e),
+      });
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -70,15 +101,29 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   const handleRemoveImage = async () => {
     const token = localStorage.getItem("auth_token") || undefined;
     if (!token) {
-      toast({ type: "info", title: "Login required", description: "Please log in to remove the campaign image." });
+      toast({
+        type: "info",
+        title: "Login required",
+        description: "Please log in to remove the campaign image.",
+      });
       return;
     }
     try {
       await updateCampaign(String(campaign.id), { image: null }, token);
-      setCampaigns((prev: Campaign[]) => prev.map((c) => (c.id === campaign.id ? { ...c, image: null } : c)));
-      toast({ type: "success", title: "Image removed", description: "Campaign cover image has been cleared." });
+      setCampaigns((prev: Campaign[]) =>
+        prev.map((c) => (c.id === campaign.id ? { ...c, image: null } : c))
+      );
+      toast({
+        type: "success",
+        title: "Image removed",
+        description: "Campaign cover image has been cleared.",
+      });
     } catch (err: any) {
-      toast({ type: "error", title: "Failed to remove image", description: err?.message || String(err) });
+      toast({
+        type: "error",
+        title: "Failed to remove image",
+        description: err?.message || String(err),
+      });
     }
   };
 
