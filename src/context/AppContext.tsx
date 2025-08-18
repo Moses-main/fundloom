@@ -171,7 +171,7 @@ const SEED_COMMENTS: Comment[] = [
 
 /* ------------------- Context shape -------------------- */
 export interface AppContextType {
-  activeTab: "campaigns" | "donated" | "profile";
+  activeTab: "overview" | "campaigns" | "donated" | "profile";
   setActiveTab: (t: AppContextType["activeTab"]) => void;
 
   campaigns: Campaign[];
@@ -423,7 +423,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (window.location.pathname.startsWith("/dashboard")) {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab") as AppContextType["activeTab"] | null;
-      if (tab && ["campaigns", "donated", "profile"].includes(tab)) {
+      if (
+        tab &&
+        ["overview", "campaigns", "donated", "profile"].includes(tab)
+      ) {
         setActiveTab(tab);
       }
     }

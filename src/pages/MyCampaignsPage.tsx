@@ -49,7 +49,9 @@ const MyCampaignsPage: React.FC = () => {
       image: bc.image || null,
       category: bc.category,
       template: bc.template || "default",
-      funds_used: bc.fundsUsed ? Object.fromEntries(Object.entries(bc.fundsUsed)) : {},
+      funds_used: bc.fundsUsed
+        ? Object.fromEntries(Object.entries(bc.fundsUsed))
+        : {},
       // @ts-ignore
       backendId: bc._id,
       // @ts-ignore
@@ -61,16 +63,27 @@ const MyCampaignsPage: React.FC = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">My Campaigns</h1>
-        <Button onClick={() => window.dispatchEvent(new CustomEvent("open-create-campaign"))}>New Campaign</Button>
+        <Button
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("open-create-campaign"))
+          }
+        >
+          New Campaign
+        </Button>
       </div>
       {loading && <p className="text-muted-foreground">Loading...</p>}
       {error && <p className="text-red-600">{error}</p>}
       {!loading && !error && mapped.length === 0 && (
-        <p className="text-muted-foreground">You have not created any campaigns yet.</p>
+        <p className="text-muted-foreground">
+          You have not created any campaigns yet.
+        </p>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {mapped.map((c) => (
-          <CampaignCard key={(c as any).backendId || c.id} campaign={c as any} />
+          <CampaignCard
+            key={(c as any).backendId || c.id}
+            campaign={c as any}
+          />
         ))}
       </div>
     </div>
