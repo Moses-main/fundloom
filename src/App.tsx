@@ -8,6 +8,8 @@ import { AppProvider } from "./context/AppContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/routing/ProtectedRoute";
 // import CampaignsPage from "./pages/CampaignsPage";
+import MyCampaignsPage from "./pages/MyCampaignsPage";
+import MyDonationsPage from "./pages/MyDonationsPage";
 // import CreateCampaignPage from "./pages/CreateCampaignPage";
 import ForgotWalletPage from "./pages/ForgotWallet";
 // import DashboardPage from "./pages/Dashboard";
@@ -41,6 +43,22 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <DashboardPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-campaigns"
+                    element={
+                      <ProtectedRoute>
+                        <MyCampaignsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-donations"
+                    element={
+                      <ProtectedRoute>
+                        <MyDonationsPage />
                       </ProtectedRoute>
                     }
                   />

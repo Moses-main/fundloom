@@ -346,3 +346,48 @@ export async function createComment(
     body: JSON.stringify(input),
   });
 }
+
+// ---------- User / Account helpers ----------
+export async function getMe() {
+  return apiFetch<{ user: any }>(`/auth/me`, { method: "GET" });
+}
+
+export async function getUserDashboard() {
+  return apiFetch<{
+    campaigns: any[];
+    recentDonationsReceived: any[];
+    recentDonationsMade: any[];
+    stats: { campaigns: any; donations: { totalDonations: number; totalDonated: number } };
+  }>(`/users/dashboard`, { method: "GET" });
+}
+
+export async function changePassword(input: { currentPassword: string; newPassword: string }) {
+  return apiFetch<{}>(`/auth/change-password`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteAccount() {
+  return apiFetch<{}>(`/users/account`, { method: "DELETE" });
+}
+
+export async function connectWallet(input: { chain: "evm" | "starknet"; address: string }) {
+  return apiFetch<{ user: any }>(`/auth/connect-wallet`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function disconnectWallet(input: { chain: "evm" | "starknet" }) {
+  return apiFetch<{ user: any }>(`/auth/disconnect-wallet`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function disconnectGoogle() {
+  return apiFetch<{ user: any }>(`/auth/disconnect-google`, {
+    method: "POST",
+  });
+}

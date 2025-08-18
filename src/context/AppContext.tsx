@@ -171,7 +171,7 @@ const SEED_COMMENTS: Comment[] = [
 
 /* ------------------- Context shape -------------------- */
 export interface AppContextType {
-  activeTab: "campaigns" | "donate" | "charity" | "profile";
+  activeTab: "campaigns" | "donate" | "profile";
   setActiveTab: (t: AppContextType["activeTab"]) => void;
 
   campaigns: Campaign[];
@@ -256,8 +256,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [activeTab, setActiveTab] =
     useState<AppContextType["activeTab"]>("campaigns");
 
-  // campaigns now sourced from backend (seed shown initially)
-  const [campaigns, setCampaigns] = useState<Campaign[]>(SEED_CAMPAIGNS);
+  // campaigns now sourced only from backend (no seed)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   // Donations and comments now live in memory only for UI and are persisted to backend via API
   const [donations, setDonations] = useState<Donation[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -285,6 +285,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [backendRecentDonations, setBackendRecentDonations] = useState<any[] | undefined>(undefined);
   const [backendComments, setBackendComments] = useState<any[] | undefined>(undefined);
   const { show: toast } = useToast();
+  // guard to ensure we only auto-open once from URL param
+  const [autoOpenHandled, setAutoOpenHandled] = useState<boolean>(false);
 
   // Quick refresh helper for backend campaign details
   const refreshBackendDetails = async (backendId: string) => {
@@ -312,24 +314,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Removed localStorage persistence for campaigns, donations, and comments
 
-  // One-time migration: backfill images for campaigns loaded from older localStorage
-  useEffect(() => {
-    let changed = false;
-    const updated = campaigns.map((c) => {
-      if (!c.image) {
-        const img = defaultImageFor(c);
-        if (img) {
-          changed = true;
-          return { ...c, image: img };
-        }
-      }
-      return c;
-    });
-    if (changed) {
-      setCampaigns(updated);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // No seed backfill anymore
 
   // Fetch campaigns from backend on mount and map to UI shape
   useEffect(() => {
@@ -356,14 +341,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           funds_used: bc.fundsUsed ? Object.fromEntries(Object.entries(bc.fundsUsed)) : {},
           // @ts-ignore attach backend id for downstream operations
           backendId: bc._id,
+          // @ts-ignore creator id for ownership filtering
+          creatorId: bc.creator?._id || bc.ownerId || null,
         }));
-        if (!cancelled && mapped.length) {
-          // Merge: backend campaigns first, then any existing (seed) that don't have backendId
-          setCampaigns((prev) => {
-            const nonBackend = prev.filter((c: any) => !c.backendId);
-            return [...mapped, ...nonBackend];
-          });
-        }
+        if (!cancelled) setCampaigns(mapped);
       } catch (e) {
         // Silently ignore; UI continues with seed
       }
@@ -425,7 +406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (window.location.pathname.startsWith("/dashboard")) {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab") as AppContextType["activeTab"] | null;
-      if (tab && ["campaigns", "donate", "charity", "profile"].includes(tab)) {
+      if (tab && ["campaigns", "donate", "profile"].includes(tab)) {
         setActiveTab(tab);
       }
     }
@@ -602,18 +583,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const copyShareLink = (id: number) => {
     try {
       const base = window.location.origin + window.location.pathname;
-      const shareUrl = `${base}?campaign=${id}`;
-      navigator.clipboard.writeText(shareUrl);
-      toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
+      // Try to resolve a stable backend id for this campaign id
+      const campaign = campaigns.find((c) => c.id === id);
+      const backendId = (campaign as any)?.backendId || (campaign as any)?._id;
+      const campaignParam = backendId ? String(backendId) : String(id);
+      const shareUrl = `${base}?campaign=${encodeURIComponent(campaignParam)}`;
+      const write = async () => {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
+        } catch {
+          // Fallback via temporary input
+          const el = document.createElement("textarea");
+          el.value = shareUrl;
+          el.style.position = "fixed";
+          el.style.left = "-9999px";
+          document.body.appendChild(el);
+          el.select();
+          try {
+            document.execCommand("copy");
+            toast({ type: "success", title: "Link copied", description: "Share link copied to clipboard" });
+          } catch {
+            toast({ type: "warning", title: "Copy failed", description: "Unable to copy link. Please copy manually." });
+          } finally {
+            document.body.removeChild(el);
+          }
+        }
+      };
+      write();
     } catch {
       toast({ type: "warning", title: "Copy failed", description: "Unable to copy link. Please copy manually." });
     }
   };
 
   const buildSocialLinks = (c: Campaign) => {
-    const base = `${
-      window.location.origin + window.location.pathname
-    }?campaign=${c.id}`;
+    const stableId = (c as any).backendId || (c as any)._id || c.id;
+    const base = `${window.location.origin + window.location.pathname}?campaign=${encodeURIComponent(
+      String(stableId)
+    )}`;
     const text = encodeURIComponent(`${c.title} — ${c.description}`);
     return {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
@@ -659,22 +666,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   const [commentDraft, setCommentDraft] = useState("");
 
-  /* ---------------- URL auto-open on mount ----------------- */
+  /* ---------------- URL auto-open for shared links ----------------- */
   useEffect(() => {
+    if (autoOpenHandled) return;
     const params = new URLSearchParams(window.location.search);
     const campaignParam = params.get("campaign");
-    if (campaignParam) {
-      const id = parseInt(campaignParam, 10);
-      if (!isNaN(id)) {
-        const found = campaigns.find((c) => c.id === id);
-        if (found) {
-          setSelectedCampaign(found);
-          setShowDonationModal(true);
-        }
+    if (!campaignParam) return;
+
+    // Try to match by backend id first (string), fall back to numeric local id
+    let found: Campaign | undefined;
+    // backend id match
+    found = campaigns.find((c: any) => String((c as any).backendId || (c as any)._id) === String(campaignParam));
+    if (!found) {
+      // try as numeric UI-local id
+      const localId = parseInt(campaignParam, 10);
+      if (!Number.isNaN(localId)) {
+        found = campaigns.find((c) => c.id === localId);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    if (found) {
+      setSelectedCampaign(found);
+      setShowDonationModal(true);
+      setAutoOpenHandled(true);
+    }
+    // If not found yet, effect will run again when campaigns change
+  }, [campaigns, autoOpenHandled, setSelectedCampaign, setShowDonationModal]);
 
   /* ---------------- expose ctx ---------------------------- */
   const value: AppContextType = {

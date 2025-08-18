@@ -153,6 +153,7 @@
 
 // src/components/CreateCampaignModal.tsx
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { createCampaign, uploadImage } from "../lib/api";
 import { useToast } from "./ui/ToastProvider";
@@ -176,6 +177,7 @@ const CreateCampaignModal: React.FC = () => {
   const [newCharityAddress, setNewCharityAddress] = useState("");
   const { show: toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -339,14 +341,10 @@ const CreateCampaignModal: React.FC = () => {
     setNewDeadline("");
     setNewImage(null);
     setShowCreateModal(false);
-    setSelectedCampaign(campaign);
     setActiveTab("campaigns");
     toast({ type: "success", title: "Campaign created", description: "Your campaign has been created successfully." });
-    // push campaign param for share
-    if (window.history && window.history.pushState) {
-      const base = window.location.origin + window.location.pathname;
-      window.history.pushState({}, "", `${base}?campaign=${campaign.id}`);
-    }
+    // Redirect to My Campaigns page instead of appending ?campaign=
+    navigate("/my-campaigns", { replace: false });
   };
 
   return (

@@ -1,12 +1,16 @@
 import React from "react";
+import { Footer } from "../components/footer";
 
 const FeaturePage: React.FC = () => {
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <section className="text-center mb-10">
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">About FundLoom</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+          About FundLoom
+        </h1>
         <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-          FundLoom enables transparent, community-driven fundraising. Explore campaigns, donate as a guest, or create your own.
+          FundLoom enables transparent, community-driven fundraising. Explore
+          campaigns, donate as a guest, or create your own.
         </p>
       </section>
 
@@ -23,13 +27,15 @@ const FeaturePage: React.FC = () => {
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-xl font-semibold">For Donors</h2>
           <p className="mt-3 text-sm text-muted-foreground">
-            Discover and support causes that matter. Donate via crypto (if connected) or simulated card/bank/mobile options for demo purposes.
+            Discover and support causes that matter. Donate via crypto (if
+            connected) or simulated card/bank/mobile options for demo purposes.
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-xl font-semibold">For Creators</h2>
           <p className="mt-3 text-sm text-muted-foreground">
-            Start a campaign in minutes. Share widely, track donations, and keep your supporters updated.
+            Start a campaign in minutes. Share widely, track donations, and keep
+            your supporters updated.
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -41,6 +47,9 @@ const FeaturePage: React.FC = () => {
           </ul>
         </div>
       </div>
+      <>
+        <Footer />
+      </>
     </main>
   );
 };

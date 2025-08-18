@@ -7,6 +7,11 @@ export const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ chi
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   if (!isAuthenticated) {
+    // If a shared donation link (?campaign=...) led here, preserve it by redirecting to home with the same query
+    const search = location.search;
+    if (search && new URLSearchParams(search).has("campaign")) {
+      return <Navigate to={`/${search}`} replace state={{ from: location }} />;
+    }
     return <Navigate to="/" replace state={{ from: location }} />;
   }
   return children;

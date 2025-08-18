@@ -79,7 +79,7 @@ export const Header: React.FC = () => {
         <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
           {isDashboard ? (
             <div className="flex items-center gap-2">
-              {["campaigns", "donate", "charity", "profile"].map((tab) => (
+              {["campaigns", "donate", "profile"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
@@ -259,7 +259,7 @@ export const Header: React.FC = () => {
               </div>
               {isDashboard ? (
                 <>
-                  {["campaigns", "donate", "charity", "profile"].map((tab) => (
+                  {["campaigns", "donate", "profile"].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => {
