@@ -241,14 +241,18 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                 disabled={disabled}
                 onClick={async () => {
                   // Always re-check live backend status before allowing donation
-                  const backendId = (campaign as any).backendId || (campaign as any)._id;
+                  const backendId =
+                    (campaign as any).backendId || (campaign as any)._id;
                   if (backendId) {
                     try {
-                      const details = await getCampaignDetails(String(backendId));
+                      const details = await getCampaignDetails(
+                        String(backendId)
+                      );
                       const bc = (details as any)?.data?.campaign;
                       if (bc) {
                         const nowInactive = bc.isActive === false;
-                        const nowUnapproved = Boolean(bc?.verification?.isVerified) === false;
+                        const nowUnapproved =
+                          Boolean(bc?.verification?.isVerified) === false;
                         // reflect latest into UI state
                         setCampaigns((prev: Campaign[]) =>
                           prev.map((c) =>
@@ -257,7 +261,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                                   ...c,
                                   is_active: bc.isActive ?? c.is_active,
                                   // @ts-ignore
-                                  is_verified: Boolean(bc?.verification?.isVerified ?? false),
+                                  is_verified: Boolean(
+                                    bc?.verification?.isVerified ?? false
+                                  ),
                                 }
                               : c
                           )
@@ -266,18 +272,31 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                           const reason = nowInactive
                             ? "This campaign is inactive. Donations are disabled."
                             : "This campaign is not approved yet. Donations are disabled.";
-                          toast({ type: "info", title: "Donations disabled", description: reason });
+                          toast({
+                            type: "info",
+                            title: "Donations disabled",
+                            description: reason,
+                          });
                           return;
                         }
                       }
                     } catch {
                       // If check fails, be conservative: block and inform user
-                      toast({ type: "warning", title: "Unable to verify campaign status", description: "Please try again later." });
+                      toast({
+                        type: "warning",
+                        title: "Unable to verify campaign status",
+                        description: "Please try again later.",
+                      });
                       return;
                     }
                   } else {
                     // No backend id -> cannot accept donations
-                    toast({ type: "info", title: "Not available", description: "This campaign isn't available for donations yet." });
+                    toast({
+                      type: "info",
+                      title: "Not available",
+                      description:
+                        "This campaign isn't available for donations yet.",
+                    });
                     return;
                   }
                   setSelectedCampaign(campaign);
@@ -293,18 +312,29 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           {(() => {
             // Owner-only donors button
             const creatorId = (campaign as any).creatorId;
-            const backendId = (campaign as any).backendId || (campaign as any)._id;
-            const isOwner = !!user?.id && !!creatorId && String(user.id) === String(creatorId);
+            const backendId =
+              (campaign as any).backendId || (campaign as any)._id;
+            const isOwner =
+              !!user?.id &&
+              !!creatorId &&
+              String(user.id) === String(creatorId);
             if (!isOwner) return null;
             return (
               <button
                 type="button"
                 onClick={() => {
                   if (!backendId) {
-                    toast({ type: "info", title: "Not available", description: "This campaign isn't synced with the server yet." });
+                    toast({
+                      type: "info",
+                      title: "Not available",
+                      description:
+                        "This campaign isn't synced with the server yet.",
+                    });
                     return;
                   }
-                  navigate(`/campaigns/${encodeURIComponent(String(backendId))}/donors`);
+                  navigate(
+                    `/campaigns/${encodeURIComponent(String(backendId))}/donors`
+                  );
                 }}
                 className="px-4 py-3 rounded-xl font-medium bg-card border border-border hover:shadow-sm"
                 title="View donors"
@@ -317,11 +347,16 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           {(() => {
             // Owner-only withdraw button
             const creatorId = (campaign as any).creatorId;
-            const backendId = (campaign as any).backendId || (campaign as any)._id;
-            const isOwner = !!user?.id && !!creatorId && String(user.id) === String(creatorId);
+            const backendId =
+              (campaign as any).backendId || (campaign as any)._id;
+            const isOwner =
+              !!user?.id &&
+              !!creatorId &&
+              String(user.id) === String(creatorId);
             if (!isOwner) return null;
 
-            const goalMet = Number(campaign.raised_amount) >= Number(campaign.target_amount);
+            const goalMet =
+              Number(campaign.raised_amount) >= Number(campaign.target_amount);
             const deadlinePassed = (() => {
               try {
                 const d = new Date(campaign.deadline);
@@ -330,7 +365,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                 return false;
               }
             })();
-            const isWithdrawn = Boolean((campaign as any).is_withdrawn ?? (campaign as any).isWithdrawn);
+            const isWithdrawn = Boolean(
+              (campaign as any).is_withdrawn ?? (campaign as any).isWithdrawn
+            );
             const eligible = (goalMet || deadlinePassed) && !isWithdrawn;
 
             if (!eligible) return null;
@@ -340,7 +377,12 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                 type="button"
                 onClick={async () => {
                   if (!backendId) {
-                    toast({ type: "info", title: "Not available", description: "This campaign isn't synced with the server yet." });
+                    toast({
+                      type: "info",
+                      title: "Not available",
+                      description:
+                        "This campaign isn't synced with the server yet.",
+                    });
                     return;
                   }
                   try {
@@ -360,18 +402,26 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                             : c
                         )
                       );
-                      toast({ type: "success", title: "Withdrawal successful", description: "Funds have been withdrawn." });
+                      toast({
+                        type: "success",
+                        title: "Withdrawal successful",
+                        description: "Funds have been withdrawn.",
+                      });
                     } else {
                       throw new Error(res?.message || "Withdrawal failed");
                     }
                   } catch (err: any) {
-                    toast({ type: "error", title: "Withdrawal failed", description: err?.message || String(err) });
+                    toast({
+                      type: "error",
+                      title: "Withdrawal failed",
+                      description: err?.message || String(err),
+                    });
                   }
                 }}
-                className="px-4 py-3 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700"
+                className="px-3 py-1 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700"
                 title="Withdraw funds"
               >
-                Withdraw Funds
+                Withdraw
               </button>
             );
           })()}

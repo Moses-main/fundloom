@@ -1,5 +1,6 @@
 // src/lib/api.ts
 // Simple API client utilities for the frontend
+import { loadingBus } from "@/lib/loadingBus";
 
 function detectDefaultBase(): string {
   try {
@@ -41,67 +42,72 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const url = joinUrl(API_BASE_URL, path);
-  const isAuthPath = /^\/?auth\//i.test(path.replace(/^\/+/, ""));
-  // Build headers carefully so defaults are not overridden by a later spread of init
-  const defaultHeaders = new Headers({ "Content-Type": "application/json" });
-  let hadToken = false;
-  if (init?.headers) {
-    const provided = new Headers(init.headers as HeadersInit);
-    provided.forEach((value, key) => defaultHeaders.set(key, value));
-  }
-  // If Authorization was not provided, auto-attach JWT from localStorage when available
+  loadingBus.begin("api");
   try {
-    const hasAuthHeader = defaultHeaders.has("Authorization");
-    if (!hasAuthHeader) {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        defaultHeaders.set("Authorization", `Bearer ${token}`);
+    const url = joinUrl(API_BASE_URL, path);
+    const isAuthPath = /^\/?auth\//i.test(path.replace(/^\/+/, ""));
+    // Build headers carefully so defaults are not overridden by a later spread of init
+    const defaultHeaders = new Headers({ "Content-Type": "application/json" });
+    let hadToken = false;
+    if (init?.headers) {
+      const provided = new Headers(init.headers as HeadersInit);
+      provided.forEach((value, key) => defaultHeaders.set(key, value));
+    }
+    // If Authorization was not provided, auto-attach JWT from localStorage when available
+    try {
+      const hasAuthHeader = defaultHeaders.has("Authorization");
+      if (!hasAuthHeader) {
+        const token = localStorage.getItem("auth_token");
+        if (token) {
+          defaultHeaders.set("Authorization", `Bearer ${token}`);
+          hadToken = true;
+        }
+      } else {
         hadToken = true;
       }
-    } else {
-      hadToken = true;
-    }
-  } catch {}
-  const { headers: _ignored, ...rest } = init || {};
-  const res = await fetch(url, {
-    ...rest,
-    headers: defaultHeaders,
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    if (res.status === 401) {
-      // Do not redirect for auth endpoints; surface the error to the form instead
-      if (!isAuthPath && hadToken) {
-        try {
-          clearAuth();
-        } catch {}
-        try {
-          if (typeof window !== "undefined") {
-            const currentPath = window.location.pathname;
-            // Avoid redirect loop or showing banner while user is already on auth page
-            if (!/^\/?auth(\/|$)/i.test(currentPath.replace(/^\/+/, ""))) {
-              const current = currentPath + window.location.search;
-              const redirect = `/auth?reason=expired&next=${encodeURIComponent(current)}`;
-              window.location.replace(redirect);
+    } catch {}
+    const { headers: _ignored, ...rest } = init || {};
+    const res = await fetch(url, {
+      ...rest,
+      headers: defaultHeaders,
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401) {
+        // Do not redirect for auth endpoints; surface the error to the form instead
+        if (!isAuthPath && hadToken) {
+          try {
+            clearAuth();
+          } catch {}
+          try {
+            if (typeof window !== "undefined") {
+              const currentPath = window.location.pathname;
+              // Avoid redirect loop or showing banner while user is already on auth page
+              if (!/^\/?auth(\/|$)/i.test(currentPath.replace(/^\/+/, ""))) {
+                const current = currentPath + window.location.search;
+                const redirect = `/auth?reason=expired&next=${encodeURIComponent(current)}`;
+                window.location.replace(redirect);
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        }
+        // For login/register/forgot or when no token existed, throw the error without redirect
       }
-      // For login/register/forgot or when no token existed, throw the error without redirect
+      // Prefer specific validation error details when available
+      const firstValidationError = Array.isArray(body?.errors) && body.errors.length > 0
+        ? body.errors[0]?.message || body.errors[0]?.field
+        : undefined;
+      const message =
+        firstValidationError ||
+        body?.message ||
+        body?.error ||
+        `Request failed (${res.status}) for ${url}`;
+      throw new Error(message);
     }
-    // Prefer specific validation error details when available
-    const firstValidationError = Array.isArray(body?.errors) && body.errors.length > 0
-      ? body.errors[0]?.message || body.errors[0]?.field
-      : undefined;
-    const message =
-      firstValidationError ||
-      body?.message ||
-      body?.error ||
-      `Request failed (${res.status}) for ${url}`;
-    throw new Error(message);
+    return body as ApiResponse<T>;
+  } finally {
+    loadingBus.end("api");
   }
-  return body as ApiResponse<T>;
 }
 
 export type AuthUser = {

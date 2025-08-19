@@ -1,28 +1,31 @@
+import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/Header";
-import HomePage from "./pages/Home";
-import AuthPage from "./pages/AuthPage";
-import OAuthCallbackPage from "./pages/OAuthCallback";
+const HomePage = lazy(() => import("./pages/Home"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallback"));
 import { AppProvider } from "./context/AppContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/routing/ProtectedRoute";
 // import CampaignsPage from "./pages/CampaignsPage";
-import MyCampaignsPage from "./pages/MyCampaignsPage";
-import MyDonationsPage from "./pages/MyDonationsPage";
+const MyCampaignsPage = lazy(() => import("./pages/MyCampaignsPage"));
+const MyDonationsPage = lazy(() => import("./pages/MyDonationsPage"));
 // import CreateCampaignPage from "./pages/CreateCampaignPage";
-import ForgotWalletPage from "./pages/ForgotWallet";
+const ForgotWalletPage = lazy(() => import("./pages/ForgotWallet"));
 // import DashboardPage from "./pages/Dashboard";
 
-import DashboardPage from "./pages/DashboardPage";
-import CampaignsPage from "./pages/CampaignsPage";
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const CampaignsPage = lazy(() => import("./pages/CampaignsPage"));
 import StarknetProvider from "./utils/starknetProvider";
-import FeaturePage from "./pages/Feature";
+const FeaturePage = lazy(() => import("./pages/Feature"));
 import { ToastProvider } from "./components/ui/ToastProvider";
-import DocsApi from "./pages/DocsApi";
-import DocsProtocol from "./pages/DocsProtocol";
-import AdminPage from "./pages/AdminPage";
-import CampaignDonorsPage from "./pages/CampaignDonorsPage";
+const DocsApi = lazy(() => import("./pages/DocsApi"));
+const DocsProtocol = lazy(() => import("./pages/DocsProtocol"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const CampaignDonorsPage = lazy(() => import("./pages/CampaignDonorsPage"));
+import { LoadingProvider } from "./context/LoadingContext";
+import LoadingOverlay from "./components/ui/LoadingOverlay";
 
 // testing with the entire application
 // import Entire from "./entireApp";
@@ -32,64 +35,69 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="Fundloom-theme">
       <StarknetProvider>
         <ToastProvider>
-          <AuthProvider>
-            <AppProvider>
-              <div className="min-h-screen bg-background">
-                <Header />
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route
-                    path="/auth/callback"
-                    element={<OAuthCallbackPage />}
-                  />
-                  <Route path="/docs/api" element={<DocsApi />} />
-                  <Route path="/docs/protocol" element={<DocsProtocol />} />
-                  <Route path="/campaigns" element={<CampaignsPage />} />
-                  {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-campaigns"
-                    element={
-                      <ProtectedRoute>
-                        <MyCampaignsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-donations"
-                    element={
-                      <ProtectedRoute>
-                        <MyDonationsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="/feature" element={<FeaturePage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route
-                    path="/campaigns/:id/donors"
-                    element={
-                      <ProtectedRoute>
-                        <CampaignDonorsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={<Navigate to="/dashboard?tab=profile" replace />}
-                  />
-                  <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
-                </Routes>
-              </div>
-            </AppProvider>
-          </AuthProvider>
+          <LoadingProvider>
+            <AuthProvider>
+              <AppProvider>
+                <div className="min-h-screen bg-background">
+                  <Header />
+                  <Suspense fallback={<LoadingOverlay />}> 
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route
+                      path="/auth/callback"
+                      element={<OAuthCallbackPage />}
+                    />
+                    <Route path="/docs/api" element={<DocsApi />} />
+                    <Route path="/docs/protocol" element={<DocsProtocol />} />
+                    <Route path="/campaigns" element={<CampaignsPage />} />
+                    {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/my-campaigns"
+                      element={
+                        <ProtectedRoute>
+                          <MyCampaignsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/my-donations"
+                      element={
+                        <ProtectedRoute>
+                          <MyDonationsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="/feature" element={<FeaturePage />} />
+                    <Route path="/admin" element={<AdminPage />} />
+                    <Route
+                      path="/campaigns/:id/donors"
+                      element={
+                        <ProtectedRoute>
+                          <CampaignDonorsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={<Navigate to="/dashboard?tab=profile" replace />}
+                    />
+                    <Route path="/forgot-wallet" element={<ForgotWalletPage />} />
+                  </Routes>
+                  </Suspense>
+                  <LoadingOverlay />
+                </div>
+              </AppProvider>
+            </AuthProvider>
+          </LoadingProvider>
         </ToastProvider>
       </StarknetProvider>
     </ThemeProvider>

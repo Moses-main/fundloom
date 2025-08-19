@@ -273,14 +273,14 @@ const DonationModal: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Donation Amount (₦)
+              {selectedPayment === "crypto" ? "Donation Amount (ETH)" : "Donation Amount (₦)"}
             </label>
             <input
               type="number"
               value={donationAmount}
               onChange={(e) => setDonationAmount(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-              placeholder="Enter amount"
+              placeholder={selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"}
             />
           </div>
 
@@ -303,8 +303,7 @@ const DonationModal: React.FC = () => {
             </label>
             <PaymentMethodSelector />
             <p className="text-xs text-gray-500 mt-2">
-              Crypto will use your connected wallet (mocked). Card/bank/mobile
-              are simulated for demo purposes.
+              Crypto uses your browser wallet (MetaMask or compatible). Card/bank/mobile are simulated for demo purposes.
             </p>
           </div>
 

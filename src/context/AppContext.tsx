@@ -15,6 +15,8 @@ import {
   getCampaigns,
 } from "../lib/api";
 import { useToast } from "@/components/ui/ToastProvider";
+import { sendEth } from "@/lib/crypto";
+import { loadingBus } from "@/lib/loadingBus";
 
 /* ---------- Types (same as your single-file app) ---------- */
 export type PaymentMethod = "crypto" | "card" | "bank" | "mobile";
@@ -512,41 +514,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const amountNum = parseFloat(donationAmount);
     if (isNaN(amountNum) || amountNum <= 0) return;
 
-    // We require a backend campaign ID to donate
+    // Resolve backend id if present (required for non-crypto payments)
     const backendId =
-      (selectedCampaign as any).backendId || (selectedCampaign as any)._id;
-    if (!backendId) {
-      toast({
-        type: "info",
-        title: "Not synced",
-        description: "Select a server-backed campaign to donate.",
-      });
-      return;
-    }
+      (selectedCampaign as any).backendId || (selectedCampaign as any)?._id;
 
     const token = localStorage.getItem("auth_token") || undefined;
 
+    loadingBus.begin("donation");
     try {
-      if (token) {
-        await postAuthDonation(
-          {
+      // CRYPTO FLOW: send ETH directly to the campaign's wallet address
+      if (selectedPayment === "crypto") {
+        const to = selectedCampaign.charity_address;
+        if (!to || !/^0x[a-fA-F0-9]{40}$/.test(to)) {
+          toast({
+            type: "warning",
+            title: "Invalid recipient",
+            description: "Campaign wallet address is missing or invalid.",
+          });
+          return;
+        }
+        // Send on-chain transaction via injected wallet
+        const txHash = await loadingBus.wrap(
+          () => sendEth({ to, amountEth: donationAmount }),
+          "crypto-tx"
+        );
+
+        // Optionally record on backend if available
+        if (backendId) {
+          if (token) {
+            await postAuthDonation(
+              {
+                campaignId: String(backendId),
+                amount: amountNum,
+                paymentMethod: selectedPayment,
+                message:
+                  (donationMessage ? donationMessage + " " : "") +
+                  `(tx: ${txHash.slice(0, 10)}...)`,
+                isAnonymous: !userName,
+              },
+              token
+            );
+          } else {
+            await postGuestDonation({
+              campaignId: String(backendId),
+              amount: amountNum,
+              paymentMethod: selectedPayment,
+              message:
+                (donationMessage ? donationMessage + " " : "") +
+                `(tx: ${txHash.slice(0, 10)}...)`,
+              isAnonymous: !userName,
+              donorName: userName || undefined,
+            });
+          }
+        }
+      } else {
+        // NON-CRYPTO: require backend id and use server payment flows
+        if (!backendId) {
+          toast({
+            type: "info",
+            title: "Not synced",
+            description: "Select a server-backed campaign to donate.",
+          });
+          return;
+        }
+        if (token) {
+          await postAuthDonation(
+            {
+              campaignId: String(backendId),
+              amount: amountNum,
+              paymentMethod: selectedPayment,
+              message: donationMessage || undefined,
+              isAnonymous: !userName,
+            },
+            token
+          );
+        } else {
+          await postGuestDonation({
             campaignId: String(backendId),
             amount: amountNum,
             paymentMethod: selectedPayment,
             message: donationMessage || undefined,
             isAnonymous: !userName,
-          },
-          token
-        );
-      } else {
-        await postGuestDonation({
-          campaignId: String(backendId),
-          amount: amountNum,
-          paymentMethod: selectedPayment,
-          message: donationMessage || undefined,
-          isAnonymous: !userName,
-          donorName: userName || undefined,
-        });
+            donorName: userName || undefined,
+          });
+        }
       }
 
       // For UI, reflect the donation locally (no localStorage persistence)
@@ -564,10 +615,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       if (simulateProcessing && selectedPayment !== "crypto") {
         setTimeout(() => completeDonation(uiDonation), 600);
         // background refresh for backend-backed campaign stats/donations
-        refreshBackendDetails(String(backendId));
+        if (backendId) refreshBackendDetails(String(backendId));
       } else {
         completeDonation(uiDonation);
-        refreshBackendDetails(String(backendId));
+        if (backendId) refreshBackendDetails(String(backendId));
       }
     } catch (e: any) {
       toast({
@@ -575,6 +626,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         title: "Donation failed",
         description: e?.message || "Please try again.",
       });
+    } finally {
+      loadingBus.end("donation");
     }
   };
 
