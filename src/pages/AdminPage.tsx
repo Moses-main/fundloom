@@ -35,21 +35,36 @@ const AdminPage: React.FC = () => {
     try {
       const token = btoa(`${username}:${password}`);
       setBasicToken(token);
-      toast({ type: "success", title: "Admin Auth", description: "Authenticated" });
+      toast({
+        type: "success",
+        title: "Admin Auth",
+        description: "Authenticated",
+      });
     } catch {
-      toast({ type: "error", title: "Admin Auth", description: "Failed to encode credentials" });
+      toast({
+        type: "error",
+        title: "Admin Auth",
+        description: "Failed to encode credentials",
+      });
     }
   };
 
   const fetchCampaigns = async () => {
     if (!authed) return;
     try {
-      const res = await adminListCampaigns({ page: campPage, limit: 25 }, authed);
+      const res = await adminListCampaigns(
+        { page: campPage, limit: 25 },
+        authed
+      );
       if (res.success && (res as any).data) {
-        setCampaigns(((res as any).data.campaigns) || []);
+        setCampaigns((res as any).data.campaigns || []);
       }
     } catch (e: any) {
-      toast({ type: "error", title: "Fetch campaigns", description: e.message });
+      toast({
+        type: "error",
+        title: "Fetch campaigns",
+        description: e.message,
+      });
     }
   };
 
@@ -58,7 +73,7 @@ const AdminPage: React.FC = () => {
     try {
       const res = await adminListUsers({ page: userPage, limit: 25 }, authed);
       if (res.success && (res as any).data) {
-        setUsers(((res as any).data.users) || []);
+        setUsers((res as any).data.users || []);
       }
     } catch (e: any) {
       toast({ type: "error", title: "Fetch users", description: e.message });
@@ -110,8 +125,22 @@ const AdminPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
         <div className="space-x-2">
-          <Button variant="secondary" onClick={() => { setBasicToken(null); }}>Sign out</Button>
-          <Button onClick={() => { fetchCampaigns(); fetchUsers(); }}>Refresh</Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setBasicToken(null);
+            }}
+          >
+            Sign out
+          </Button>
+          <Button
+            onClick={() => {
+              fetchCampaigns();
+              fetchUsers();
+            }}
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -120,9 +149,19 @@ const AdminPage: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">Campaigns</h2>
           <div className="space-x-2">
-            <Button variant="secondary" onClick={() => setCampPage(Math.max(1, campPage - 1))}>Prev</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setCampPage(Math.max(1, campPage - 1))}
+            >
+              Prev
+            </Button>
             <span className="text-sm">Page {campPage}</span>
-            <Button variant="secondary" onClick={() => setCampPage(campPage + 1)}>Next</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setCampPage(campPage + 1)}
+            >
+              Next
+            </Button>
           </div>
         </div>
         <div className="overflow-auto border rounded">
@@ -140,21 +179,70 @@ const AdminPage: React.FC = () => {
               {campaigns.map((c) => (
                 <tr key={c._id} className="border-t">
                   <td className="p-2">{c.title}</td>
-                  <td className="p-2">{c.creator?.name || '—'}</td>
-                  <td className="p-2">{c.verification?.isVerified ? 'Yes' : 'No'}</td>
-                  <td className="p-2">{c.isActive ? 'Yes' : 'No'}</td>
+                  <td className="p-2">{c.creator?.name || "—"}</td>
+                  <td className="p-2">
+                    {c.verification?.isVerified ? "Yes" : "No"}
+                  </td>
+                  <td className="p-2">{c.isActive ? "Yes" : "No"}</td>
                   <td className="p-2 space-x-2">
-                    <Button size="sm" onClick={async () => {
-                      try { await adminApproveCampaign(c._id, authed); toast({ type: 'success', title: 'Approved' }); fetchCampaigns(); } catch (e: any) { toast({ type: 'error', title: 'Approve failed', description: e.message }); }
-                    }}>Approve</Button>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await adminApproveCampaign(c._id, authed);
+                          toast({ type: "success", title: "Approved" });
+                          fetchCampaigns();
+                        } catch (e: any) {
+                          toast({
+                            type: "error",
+                            title: "Approve failed",
+                            description: e.message,
+                          });
+                        }
+                      }}
+                    >
+                      Approve
+                    </Button>
                     {c.isActive ? (
-                      <Button size="sm" variant="secondary" onClick={async () => {
-                        try { await adminDeactivateCampaign(c._id, authed); toast({ type: 'success', title: 'Deactivated' }); fetchCampaigns(); } catch (e: any) { toast({ type: 'error', title: 'Deactivate failed', description: e.message }); }
-                      }}>Deactivate</Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          try {
+                            await adminDeactivateCampaign(c._id, authed);
+                            toast({ type: "success", title: "Deactivated" });
+                            fetchCampaigns();
+                          } catch (e: any) {
+                            toast({
+                              type: "error",
+                              title: "Deactivate failed",
+                              description: e.message,
+                            });
+                          }
+                        }}
+                      >
+                        Deactivate
+                      </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" onClick={async () => {
-                        try { await adminActivateCampaign(c._id, authed); toast({ type: 'success', title: 'Activated' }); fetchCampaigns(); } catch (e: any) { toast({ type: 'error', title: 'Activate failed', description: e.message }); }
-                      }}>Activate</Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          try {
+                            await adminActivateCampaign(c._id, authed);
+                            toast({ type: "success", title: "Activated" });
+                            fetchCampaigns();
+                          } catch (e: any) {
+                            toast({
+                              type: "error",
+                              title: "Activate failed",
+                              description: e.message,
+                            });
+                          }
+                        }}
+                      >
+                        Activate
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -169,9 +257,19 @@ const AdminPage: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">Users</h2>
           <div className="space-x-2">
-            <Button variant="secondary" onClick={() => setUserPage(Math.max(1, userPage - 1))}>Prev</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setUserPage(Math.max(1, userPage - 1))}
+            >
+              Prev
+            </Button>
             <span className="text-sm">Page {userPage}</span>
-            <Button variant="secondary" onClick={() => setUserPage(userPage + 1)}>Next</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setUserPage(userPage + 1)}
+            >
+              Next
+            </Button>
           </div>
         </div>
         <div className="overflow-auto border rounded">
@@ -191,21 +289,69 @@ const AdminPage: React.FC = () => {
                   <td className="p-2">{u.name}</td>
                   <td className="p-2">{u.email}</td>
                   <td className="p-2">{u.role}</td>
-                  <td className="p-2">{u.isLocked ? 'Yes' : 'No'}</td>
+                  <td className="p-2">{u.isLocked ? "Yes" : "No"}</td>
                   <td className="p-2 space-x-2">
                     {u.isLocked ? (
-                      <Button size="sm" onClick={async () => {
-                        try { await adminUnlockUser(u._id, authed); toast({ type: 'success', title: 'Unlocked' }); fetchUsers(); } catch (e: any) { toast({ type: 'error', title: 'Unlock failed', description: e.message }); }
-                      }}>Unlock</Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await adminUnlockUser(u._id, authed);
+                            toast({ type: "success", title: "Unlocked" });
+                            fetchUsers();
+                          } catch (e: any) {
+                            toast({
+                              type: "error",
+                              title: "Unlock failed",
+                              description: e.message,
+                            });
+                          }
+                        }}
+                      >
+                        Unlock
+                      </Button>
                     ) : (
-                      <Button size="sm" onClick={async () => {
-                        try { await adminLockUser(u._id, authed); toast({ type: 'success', title: 'Locked' }); fetchUsers(); } catch (e: any) { toast({ type: 'error', title: 'Lock failed', description: e.message }); }
-                      }}>Lock</Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await adminLockUser(u._id, authed);
+                            toast({ type: "success", title: "Locked" });
+                            fetchUsers();
+                          } catch (e: any) {
+                            toast({
+                              type: "error",
+                              title: "Lock failed",
+                              description: e.message,
+                            });
+                          }
+                        }}
+                      >
+                        Lock
+                      </Button>
                     )}
-                    <Button size="sm" variant="destructive" onClick={async () => {
-                      if (!confirm('Delete user? This cannot be undone.')) return;
-                      try { await adminDeleteUser(u._id, authed); toast({ type: 'success', title: 'Deleted' }); fetchUsers(); } catch (e: any) { toast({ type: 'error', title: 'Delete failed', description: e.message }); }
-                    }}>Delete</Button>
+                    <Button
+                      className="text-white"
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        if (!confirm("Delete user? This cannot be undone."))
+                          return;
+                        try {
+                          await adminDeleteUser(u._id, authed);
+                          toast({ type: "success", title: "Deleted" });
+                          fetchUsers();
+                        } catch (e: any) {
+                          toast({
+                            type: "error",
+                            title: "Delete failed",
+                            description: e.message,
+                          });
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))}
