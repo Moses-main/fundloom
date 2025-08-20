@@ -451,6 +451,41 @@ export async function disconnectGoogle() {
   });
 }
 
+// ---------- Wallet Auth (EVM) ----------
+// These endpoints may not exist on the backend yet. We call them optimistically and surface errors.
+export async function requestWalletNonce(address: string) {
+  return apiFetch<{ nonce: string }>(`/auth/wallet/nonce`, {
+    method: "POST",
+    body: JSON.stringify({ address }),
+  });
+}
+
+export async function verifyWalletSignature(payload: {
+  address: string;
+  message: string;
+  signature: string;
+}) {
+  return apiFetch<AuthPayload>(`/auth/wallet/verify`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ---------- Optional: record crypto donation on backend (fire-and-forget if backend supports it) ----------
+export async function recordCryptoDonation(input: {
+  campaignId: string;
+  txHash: string;
+  amountWei: string;
+  chainId: string;
+  from: string;
+  message?: string;
+}) {
+  return apiFetch<{ donation?: any }>(`/donations/crypto`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Admin (Basic Auth) ----------
 export type BasicAuth = { basicToken: string }; // base64 of username:password
 
