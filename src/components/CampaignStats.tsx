@@ -12,9 +12,11 @@ const CampaignStats: React.FC = () => {
       <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Total Raised</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Total Raised
+            </p>
             <p className="text-3xl font-bold text-foreground">
-              ₦{formatAmount(totalRaised)}
+              $ {formatAmount(totalRaised)}
             </p>
           </div>
           <TrendingUp className="h-8 w-8 text-green-500" />
@@ -24,8 +26,12 @@ const CampaignStats: React.FC = () => {
       <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Active Campaigns</p>
-            <p className="text-3xl font-bold text-foreground">{campaigns.length}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Active Campaigns
+            </p>
+            <p className="text-3xl font-bold text-foreground">
+              {campaigns.length}
+            </p>
           </div>
           <Target className="h-8 w-8 text-blue-500" />
         </div>
@@ -34,8 +40,12 @@ const CampaignStats: React.FC = () => {
       <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Total Donors</p>
-            <p className="text-3xl font-bold text-foreground">{donations.length}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Total Donors
+            </p>
+            <p className="text-3xl font-bold text-foreground">
+              {donations.length}
+            </p>
           </div>
           <Users className="h-8 w-8 text-purple-500" />
         </div>
@@ -44,7 +54,9 @@ const CampaignStats: React.FC = () => {
       <div className="bg-card p-6 rounded-2xl shadow-lg border border-border">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Impact Score</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Impact Score
+            </p>
             <p className="text-3xl font-bold text-foreground">98%</p>
           </div>
           <Heart className="h-8 w-8 text-red-500" />

@@ -3,7 +3,15 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "../components/ui/Button"; // Adjust path based on your folder structure
 import { Input } from "../components/ui/Input"; // Adjust path based on your folder structure
-import { API_BASE_URL, getMe, getUserDashboard, changePassword, deleteAccount, clearAuth, disconnectGoogle } from "../lib/api";
+import {
+  API_BASE_URL,
+  getMe,
+  getUserDashboard,
+  changePassword,
+  deleteAccount,
+  clearAuth,
+  disconnectGoogle,
+} from "../lib/api";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
   User,
@@ -50,7 +58,10 @@ const ProfilePage: React.FC = () => {
   );
 
   const [isEditing, setIsEditing] = useState(false);
-  const [stats, setStats] = useState<{ totalDonated: number; totalDonations: number }>({ totalDonated: 0, totalDonations: 0 });
+  const [stats, setStats] = useState<{
+    totalDonated: number;
+    totalDonations: number;
+  }>({ totalDonated: 0, totalDonations: 0 });
   const [prefEmailNotif, setPrefEmailNotif] = useState(true);
   const [googleConnected, setGoogleConnected] = useState(false);
   // Password fields
@@ -71,7 +82,11 @@ const ProfilePage: React.FC = () => {
   const handleSave = async () => {
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      toast({ type: "info", title: "Login required", description: "Please log in to save your profile." });
+      toast({
+        type: "info",
+        title: "Login required",
+        description: "Please log in to save your profile.",
+      });
       return;
     }
     try {
@@ -98,9 +113,17 @@ const ProfilePage: React.FC = () => {
         }
       } catch {}
       setIsEditing(false);
-      toast({ type: "success", title: "Profile updated", description: "Your profile changes have been saved." });
+      toast({
+        type: "success",
+        title: "Profile updated",
+        description: "Your profile changes have been saved.",
+      });
     } catch (e: any) {
-      toast({ type: "error", title: "Save failed", description: e?.message || "Unable to save profile" });
+      toast({
+        type: "error",
+        title: "Save failed",
+        description: e?.message || "Unable to save profile",
+      });
     }
   };
 
@@ -119,7 +142,10 @@ const ProfilePage: React.FC = () => {
             bio: (u.profile && u.profile.bio) || prev.bio,
           }));
           if (u.lastLogin) setLastLogin(u.lastLogin);
-          if (u.preferences && typeof u.preferences.emailNotifications === "boolean") {
+          if (
+            u.preferences &&
+            typeof u.preferences.emailNotifications === "boolean"
+          ) {
             setPrefEmailNotif(!!u.preferences.emailNotifications);
           }
           setGoogleConnected(!!u.oauth?.google?.id);
@@ -127,8 +153,14 @@ const ProfilePage: React.FC = () => {
         // Load dashboard stats
         const dash = await getUserDashboard();
         if (dash?.success && dash.data?.stats) {
-          const d = dash.data.stats.donations || { totalDonations: 0, totalDonated: 0 };
-          setStats({ totalDonations: d.totalDonations || 0, totalDonated: d.totalDonated || 0 });
+          const d = dash.data.stats.donations || {
+            totalDonations: 0,
+            totalDonated: 0,
+          };
+          setStats({
+            totalDonations: d.totalDonations || 0,
+            totalDonated: d.totalDonated || 0,
+          });
         }
       } catch (e) {
         console.warn("Failed to load profile:", e);
@@ -138,7 +170,11 @@ const ProfilePage: React.FC = () => {
   }, []);
 
   const formatNaira = (n: number) =>
-    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n || 0);
+    new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      maximumFractionDigits: 0,
+    }).format(n || 0);
 
   return (
     <div className="min-h-screen px-4 py-6 bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
@@ -171,7 +207,9 @@ const ProfilePage: React.FC = () => {
             </div>
             <div>
               <div className="text-sm text-gray-500">Total Donations</div>
-              <div className="text-lg font-semibold">{formatNaira(stats.totalDonated)}</div>
+              <div className="text-lg font-semibold">
+                {formatNaira(stats.totalDonated)}
+              </div>
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 flex items-center gap-3">
@@ -180,7 +218,9 @@ const ProfilePage: React.FC = () => {
             </div>
             <div>
               <div className="text-sm text-gray-500">Campaigns Supported</div>
-              <div className="text-lg font-semibold">{stats.totalDonations}</div>
+              <div className="text-lg font-semibold">
+                {stats.totalDonations}
+              </div>
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 flex items-center gap-3">
@@ -308,7 +348,11 @@ const ProfilePage: React.FC = () => {
               onClick={async () => {
                 const token = localStorage.getItem("auth_token");
                 if (!token) {
-                  toast({ type: "info", title: "Login required", description: "Please log in to save preferences." });
+                  toast({
+                    type: "info",
+                    title: "Login required",
+                    description: "Please log in to save preferences.",
+                  });
                   return;
                 }
                 try {
@@ -324,10 +368,21 @@ const ProfilePage: React.FC = () => {
                   });
                   const body = await res.json();
                   if (!res.ok)
-                    throw new Error(body?.message || "Failed to save preferences");
-                  toast({ type: "success", title: "Preferences saved", description: "Your notification preference has been updated." });
+                    throw new Error(
+                      body?.message || "Failed to save preferences"
+                    );
+                  toast({
+                    type: "success",
+                    title: "Preferences saved",
+                    description:
+                      "Your notification preference has been updated.",
+                  });
                 } catch (e: any) {
-                  toast({ type: "error", title: "Save failed", description: e?.message || "Unable to save preferences" });
+                  toast({
+                    type: "error",
+                    title: "Save failed",
+                    description: e?.message || "Unable to save preferences",
+                  });
                 }
               }}
             >
@@ -356,10 +411,18 @@ const ProfilePage: React.FC = () => {
                     const res = await disconnectGoogle();
                     if (res?.success) {
                       setGoogleConnected(false);
-                      toast({ type: "success", title: "Disconnected", description: "Google account disconnected." });
+                      toast({
+                        type: "success",
+                        title: "Disconnected",
+                        description: "Google account disconnected.",
+                      });
                     }
                   } catch (e: any) {
-                    toast({ type: "error", title: "Failed", description: e?.message || "Could not disconnect Google" });
+                    toast({
+                      type: "error",
+                      title: "Failed",
+                      description: e?.message || "Could not disconnect Google",
+                    });
                   }
                 } else {
                   try {
@@ -382,37 +445,78 @@ const ProfilePage: React.FC = () => {
             <Shield className="h-5 w-5" /> Security
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-            <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            <Input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <Input
+              type="password"
+              placeholder="Current password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="New password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
           <div className="mt-4">
-            <Button onClick={async () => {
-              try {
-                const token = localStorage.getItem("auth_token");
-                if (!token) {
-                  toast({ type: "info", title: "Login required", description: "Please log in to change your password." });
-                  return;
+            <Button
+              onClick={async () => {
+                try {
+                  const token = localStorage.getItem("auth_token");
+                  if (!token) {
+                    toast({
+                      type: "info",
+                      title: "Login required",
+                      description: "Please log in to change your password.",
+                    });
+                    return;
+                  }
+                  if (!currentPassword || !newPassword) {
+                    toast({
+                      type: "error",
+                      title: "Missing fields",
+                      description: "Please fill in current and new password.",
+                    });
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    toast({
+                      type: "error",
+                      title: "Password mismatch",
+                      description:
+                        "New password and confirmation do not match.",
+                    });
+                    return;
+                  }
+                  const res = await changePassword({
+                    currentPassword,
+                    newPassword,
+                  });
+                  if (res?.success) {
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    toast({
+                      type: "success",
+                      title: "Password updated",
+                      description: "Your password was changed successfully.",
+                    });
+                  }
+                } catch (e: any) {
+                  toast({
+                    type: "error",
+                    title: "Update failed",
+                    description: e?.message || "Unable to change password",
+                  });
                 }
-                if (!currentPassword || !newPassword) {
-                  toast({ type: "error", title: "Missing fields", description: "Please fill in current and new password." });
-                  return;
-                }
-                if (newPassword !== confirmPassword) {
-                  toast({ type: "error", title: "Password mismatch", description: "New password and confirmation do not match." });
-                  return;
-                }
-                const res = await changePassword({ currentPassword, newPassword });
-                if (res?.success) {
-                  setCurrentPassword("");
-                  setNewPassword("");
-                  setConfirmPassword("");
-                  toast({ type: "success", title: "Password updated", description: "Your password was changed successfully." });
-                }
-              } catch (e: any) {
-                toast({ type: "error", title: "Update failed", description: e?.message || "Unable to change password" });
-              }
-            }}>
+              }}
+            >
               Update Password
             </Button>
           </div>
@@ -423,7 +527,11 @@ const ProfilePage: React.FC = () => {
               onClick={async () => {
                 const token = localStorage.getItem("auth_token");
                 if (!token) {
-                  toast({ type: "info", title: "Login required", description: "Please log in first." });
+                  toast({
+                    type: "info",
+                    title: "Login required",
+                    description: "Please log in first.",
+                  });
                   return;
                 }
                 const confirmed = window.confirm(
@@ -434,7 +542,11 @@ const ProfilePage: React.FC = () => {
                   const res = await deleteAccount();
                   if (res?.success) {
                     clearAuth();
-                    toast({ type: "success", title: "Account deleted", description: "Your account has been deleted." });
+                    toast({
+                      type: "success",
+                      title: "Account deleted",
+                      description: "Your account has been deleted.",
+                    });
                     try {
                       if (typeof window !== "undefined") {
                         window.location.replace("/auth");
@@ -442,7 +554,11 @@ const ProfilePage: React.FC = () => {
                     } catch {}
                   }
                 } catch (e: any) {
-                  toast({ type: "error", title: "Deletion failed", description: e?.message || "Unable to delete account" });
+                  toast({
+                    type: "error",
+                    title: "Deletion failed",
+                    description: e?.message || "Unable to delete account",
+                  });
                 }
               }}
               className="bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
@@ -557,7 +673,7 @@ export default ProfilePage;
 //                       {campaign?.title}
 //                     </h4>
 //                     <p className="text-sm text-gray-600 mb-2">
-//                       ₦{formatAmount(d.amount)} donated
+//                       ${formatAmount(d.amount)} donated
 //                     </p>
 //                     {d.donor_message && (
 //                       <p className="text-sm text-gray-700 italic">

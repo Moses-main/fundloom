@@ -19,7 +19,8 @@ const CampaignDonorsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   const isOwner = useMemo(() => {
-    const creatorId = (campaign as any)?.creator?._id || (campaign as any)?.creatorId;
+    const creatorId =
+      (campaign as any)?.creator?._id || (campaign as any)?.creatorId;
     return !!user?.id && !!creatorId && String(creatorId) === String(user.id);
   }, [campaign, user?.id]);
 
@@ -38,7 +39,9 @@ const CampaignDonorsPage: React.FC = () => {
 
         const creatorId = c?.creator?._id || c?.creatorId;
         if (!(user?.id && creatorId && String(creatorId) === String(user.id))) {
-          throw new Error("You are not authorized to view donors of this campaign");
+          throw new Error(
+            "You are not authorized to view donors of this campaign"
+          );
         }
 
         // 2) Load first donors page
@@ -71,26 +74,36 @@ const CampaignDonorsPage: React.FC = () => {
       setDonations((prev) => [...prev, ...(list || [])]);
       setPage(pagination?.currentPage || next);
       setTotalPages(pagination?.totalPages || totalPages);
-    } catch {}
-    finally { setLoadingMore(false); }
+    } catch {
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   // If unauthorized, show a simple message with back link
   if (!loading && error && /not authorized/i.test(error)) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <button className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline" onClick={() => navigate(-1)}>
+        <button
+          className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
+          onClick={() => navigate(-1)}
+        >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
         <h1 className="text-xl font-semibold mb-2">Access denied</h1>
-        <p className="text-muted-foreground">Only the campaign creator can view this page.</p>
+        <p className="text-muted-foreground">
+          Only the campaign creator can view this page.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <button className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline" onClick={() => navigate(-1)}>
+      <button
+        className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:underline"
+        onClick={() => navigate(-1)}
+      >
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
@@ -112,27 +125,38 @@ const CampaignDonorsPage: React.FC = () => {
             <Inbox className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-base font-medium">No donors yet</p>
-          <p className="text-sm text-muted-foreground">Once your campaign receives donations, they will appear here.</p>
+          <p className="text-sm text-muted-foreground">
+            Once your campaign receives donations, they will appear here.
+          </p>
         </div>
       )}
 
       {isOwner && donations.length > 0 && (
         <div className="space-y-4">
           {donations.map((d: any) => (
-            <div key={d._id} className="border border-border rounded-lg p-4 bg-card">
+            <div
+              key={d._id}
+              className="border border-border rounded-lg p-4 bg-card"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">
-                    {d.isAnonymous ? "Anonymous" : d.donor?.name || d.donorName || "Donor"}
+                    {d.isAnonymous
+                      ? "Anonymous"
+                      : d.donor?.name || d.donorName || "Donor"}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(d.createdAt).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold">₦{Number(d.amount).toLocaleString()}</div>
+                  <div className="font-semibold">
+                    ${Number(d.amount).toLocaleString()}
+                  </div>
                   {d.message && (
-                    <div className="text-sm text-muted-foreground max-w-md truncate">"{d.message}"</div>
+                    <div className="text-sm text-muted-foreground max-w-md truncate">
+                      "{d.message}"
+                    </div>
                   )}
                 </div>
               </div>

@@ -60,7 +60,7 @@
 //         <div className="space-y-4">
 //           <div>
 //             <label className="block text-sm font-medium text-gray-700 mb-2">
-//               Donation Amount (₦)
+//               Donation Amount ($)
 //             </label>
 //             <input
 //               type="number"
@@ -190,7 +190,8 @@ const DonationModal: React.FC = () => {
 
   const [donorEmail, setDonorEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const backendId = (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
+  const backendId =
+    (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
   const { show: toast } = useToast();
 
   if (!selectedCampaign) return null;
@@ -232,7 +233,7 @@ const DonationModal: React.FC = () => {
             ></div>
           </div>
           <p className="text-sm text-gray-600">
-            ₦{formatAmount(selectedCampaign.raised_amount)} of ₦
+            ${formatAmount(selectedCampaign.raised_amount)} of $
             {formatAmount(selectedCampaign.target_amount)} raised
           </p>
         </div>
@@ -265,7 +266,8 @@ const DonationModal: React.FC = () => {
               />
               {!backendId && (
                 <p className="text-xs text-red-600 mt-2">
-                  This campaign isn\'t synced with the server yet. Please create/select a server-backed campaign to use card payments.
+                  This campaign isn\'t synced with the server yet. Please
+                  create/select a server-backed campaign to use card payments.
                 </p>
               )}
             </div>
@@ -273,14 +275,18 @@ const DonationModal: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {selectedPayment === "crypto" ? "Donation Amount (ETH)" : "Donation Amount (₦)"}
+              {selectedPayment === "crypto"
+                ? "Donation Amount ($)"
+                : "Donation Amount ($)"}
             </label>
             <input
               type="number"
               value={donationAmount}
               onChange={(e) => setDonationAmount(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-              placeholder={selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"}
+              placeholder={
+                selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"
+              }
             />
           </div>
 
@@ -303,13 +309,17 @@ const DonationModal: React.FC = () => {
             </label>
             <PaymentMethodSelector />
             <p className="text-xs text-gray-500 mt-2">
-              Crypto uses your browser wallet (MetaMask or compatible). Card/bank/mobile are simulated for demo purposes.
+              Crypto uses your browser wallet (MetaMask or compatible).
+              Card/bank/mobile are simulated for demo purposes.
             </p>
           </div>
 
           <ActionButton
             submitting={submitting}
-            disabled={!donationAmount || (selectedPayment === "card" && (!donorEmail || !backendId))}
+            disabled={
+              !donationAmount ||
+              (selectedPayment === "card" && (!donorEmail || !backendId))
+            }
             onClick={async () => {
               const amountNum = parseFloat(donationAmount || "0");
               if (!selectedCampaign || !amountNum || amountNum <= 0) return;
@@ -334,10 +344,16 @@ const DonationModal: React.FC = () => {
                   if (resp?.success && (resp.data as any)?.authorizationUrl) {
                     window.location.href = (resp.data as any).authorizationUrl;
                   } else {
-                    throw new Error(resp?.message || "Failed to initialize Paystack");
+                    throw new Error(
+                      resp?.message || "Failed to initialize Paystack"
+                    );
                   }
                 } catch (e: any) {
-                  toast({ type: "error", title: "Payment init failed", description: e?.message || "Failed to start card payment." });
+                  toast({
+                    type: "error",
+                    title: "Payment init failed",
+                    description: e?.message || "Failed to start card payment.",
+                  });
                 } finally {
                   setSubmitting(false);
                 }

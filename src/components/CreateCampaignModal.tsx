@@ -183,11 +183,19 @@ const CreateCampaignModal: React.FC = () => {
     if (!file) return;
     const MAX_BYTES = 5 * 1024 * 1024; // 5MB
     if (!file.type?.startsWith("image/")) {
-      toast({ type: "warning", title: "Invalid file", description: "Please select a valid image file." });
+      toast({
+        type: "warning",
+        title: "Invalid file",
+        description: "Please select a valid image file.",
+      });
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast({ type: "warning", title: "Image too large", description: "Please choose an image under 5MB." });
+      toast({
+        type: "warning",
+        title: "Image too large",
+        description: "Please choose an image under 5MB.",
+      });
       return;
     }
     const reader = new FileReader();
@@ -197,28 +205,48 @@ const CreateCampaignModal: React.FC = () => {
 
   const handleCreate = async () => {
     if (!newTitle || !newDescription || !newTarget || !newDeadline) {
-      toast({ type: "warning", title: "Missing fields", description: "Please fill all fields to create a campaign." });
+      toast({
+        type: "warning",
+        title: "Missing fields",
+        description: "Please fill all fields to create a campaign.",
+      });
       return;
     }
     // Basic client-side validations aligned with backend Joi
     if (newTitle.trim().length < 5) {
-      toast({ type: "warning", title: "Title too short", description: "Title must be at least 5 characters long" });
+      toast({
+        type: "warning",
+        title: "Title too short",
+        description: "Title must be at least 5 characters long",
+      });
       return;
     }
     if (newDescription.trim().length < 20) {
-      toast({ type: "warning", title: "Description too short", description: "Description must be at least 20 characters long" });
+      toast({
+        type: "warning",
+        title: "Description too short",
+        description: "Description must be at least 20 characters long",
+      });
       return;
     }
     const targetNum = parseFloat(newTarget);
     if (isNaN(targetNum) || targetNum < 1000) {
-      toast({ type: "warning", title: "Invalid target", description: "Target amount must be at least ₦1,000" });
+      toast({
+        type: "warning",
+        title: "Invalid target",
+        description: "Target amount must be at least $1,000",
+      });
       return;
     }
     // Normalize deadline to end-of-day to avoid timezone edge cases causing "past" dates
     const deadlineLocal = new Date(`${newDeadline}T23:59:59`);
     const deadlineIso = deadlineLocal.toISOString();
     if (deadlineLocal.getTime() <= Date.now()) {
-      toast({ type: "warning", title: "Invalid deadline", description: "Deadline must be in the future" });
+      toast({
+        type: "warning",
+        title: "Invalid deadline",
+        description: "Deadline must be in the future",
+      });
       return;
     }
     // Normalize image inputs
@@ -227,7 +255,11 @@ const CreateCampaignModal: React.FC = () => {
     // Require authentication for creation
     const token = localStorage.getItem("auth_token") || undefined;
     if (!token) {
-      toast({ type: "info", title: "Login required", description: "Please log in to create a campaign." });
+      toast({
+        type: "info",
+        title: "Login required",
+        description: "Please log in to create a campaign.",
+      });
       return;
     }
     let backendCampaign: any | null = null;
@@ -269,15 +301,26 @@ const CreateCampaignModal: React.FC = () => {
 
             // Only call upload API if we constructed a valid payload
             if (payload && (payload.file || payload.url)) {
-              const up = await uploadImage({ ...payload, folder: 'fundloom/campaigns' }, token);
+              const up = await uploadImage(
+                { ...payload, folder: "fundloom/campaigns" },
+                token
+              );
               const uploadedUrl = (up as any)?.data?.url;
               if (uploadedUrl) imageToUse = uploadedUrl;
             }
           } catch (e) {
-            console.warn("Image upload failed, proceeding without image:", (e as any)?.message || e);
+            console.warn(
+              "Image upload failed, proceeding without image:",
+              (e as any)?.message || e
+            );
             // Do NOT send base64 or invalid image in campaign payload; drop image to avoid large bodies and validation surprises
             imageToUse = null;
-            toast({ type: "warning", title: "Image upload failed", description: "We couldn't upload your image. You can proceed without an image or try another file/URL." });
+            toast({
+              type: "warning",
+              title: "Image upload failed",
+              description:
+                "We couldn't upload your image. You can proceed without an image or try another file/URL.",
+            });
           }
         }
         // Only include charityAddress if it matches backend's Ethereum address pattern
@@ -295,7 +338,8 @@ const CreateCampaignModal: React.FC = () => {
           template: newTemplate as any,
         };
         // Prefer manually supplied charity address if valid, otherwise fall back to connected userAddress
-        const candidateCharity = (newCharityAddress || "").trim() || userAddress;
+        const candidateCharity =
+          (newCharityAddress || "").trim() || userAddress;
         if (candidateCharity && ethAddrRegex.test(candidateCharity)) {
           payload.charityAddress = candidateCharity;
         }
@@ -303,14 +347,24 @@ const CreateCampaignModal: React.FC = () => {
         backendCampaign = res?.data?.campaign || null;
       } catch (e: any) {
         console.error("Campaign creation failed:", e?.message || e);
-        toast({ type: "error", title: "Create failed", description: e?.message || "Failed to create campaign. Please try again." });
+        toast({
+          type: "error",
+          title: "Create failed",
+          description:
+            e?.message || "Failed to create campaign. Please try again.",
+        });
         return;
       }
     }
 
     // Ensure we have a backend campaign
     if (!backendCampaign) {
-      toast({ type: "error", title: "No campaign", description: "Failed to create campaign on the server. Please try again." });
+      toast({
+        type: "error",
+        title: "No campaign",
+        description:
+          "Failed to create campaign on the server. Please try again.",
+      });
       return;
     }
 
@@ -330,7 +384,9 @@ const CreateCampaignModal: React.FC = () => {
       category: backendCampaign.category,
       template: backendCampaign.template || newTemplate,
       funds_used: Object.fromEntries(
-        backendCampaign.fundsUsed ? Array.from(Object.entries(backendCampaign.fundsUsed)) : []
+        backendCampaign.fundsUsed
+          ? Array.from(Object.entries(backendCampaign.fundsUsed))
+          : []
       ),
       backendId: backendCampaign._id,
     } as any;
@@ -342,7 +398,11 @@ const CreateCampaignModal: React.FC = () => {
     setNewImage(null);
     setShowCreateModal(false);
     setActiveTab("campaigns");
-    toast({ type: "success", title: "Campaign created", description: "Your campaign has been created successfully." });
+    toast({
+      type: "success",
+      title: "Campaign created",
+      description: "Your campaign has been created successfully.",
+    });
     // Redirect to My Campaigns page instead of appending ?campaign=
     navigate("/my-campaigns", { replace: false });
   };
@@ -356,7 +416,12 @@ const CreateCampaignModal: React.FC = () => {
         aria-labelledby="create-campaign-title"
       >
         <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 mb-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 flex items-center justify-between">
-          <h3 id="create-campaign-title" className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Create a Campaign</h3>
+          <h3
+            id="create-campaign-title"
+            className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100"
+          >
+            Create a Campaign
+          </h3>
           <button
             onClick={() => setShowCreateModal(false)}
             className="text-2xl leading-none px-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -398,7 +463,7 @@ const CreateCampaignModal: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Target Amount (₦)
+                Target Amount ($)
               </label>
               <input
                 type="number"
@@ -419,7 +484,7 @@ const CreateCampaignModal: React.FC = () => {
                 value={newDeadline}
                 onChange={(e) => setNewDeadline(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400"
-                min={new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split("T")[0]}
                 required
               />
             </div>
@@ -439,7 +504,8 @@ const CreateCampaignModal: React.FC = () => {
               autoComplete="off"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              If left empty, the connected wallet will be used as the charity address. You can paste a different EOA or multisig (Safe) here.
+              If left empty, the connected wallet will be used as the charity
+              address. You can paste a different EOA or multisig (Safe) here.
             </p>
           </div>
 
@@ -503,7 +569,9 @@ const CreateCampaignModal: React.FC = () => {
                 Upload Image
               </button>
               {newImage && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">Image selected</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Image selected
+                </span>
               )}
             </div>
             {newImage && (
@@ -515,7 +583,11 @@ const CreateCampaignModal: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => { setNewImage(null); setNewImagePath(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  onClick={() => {
+                    setNewImage(null);
+                    setNewImagePath("");
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
                   className="absolute top-2 right-2 bg-white/80 dark:bg-gray-900/70 hover:bg-white dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200 rounded-full w-8 h-8 flex items-center justify-center shadow"
                   title="Remove image"
                   aria-label="Remove image"

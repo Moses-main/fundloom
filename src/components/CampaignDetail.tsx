@@ -96,8 +96,8 @@ const CampaignDetail: React.FC = () => {
                 <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
               ) : (
                 <>
-                  <strong>Raised:</strong> ₦
-                  {formatAmount(selectedCampaign.raised_amount)} / ₦
+                  <strong>Raised:</strong> $
+                  {formatAmount(selectedCampaign.raised_amount)} / $
                   {formatAmount(selectedCampaign.target_amount)}
                 </>
               )}
@@ -147,7 +147,7 @@ const CampaignDetail: React.FC = () => {
                 className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm"
               >
                 <div className="text-gray-600">{k}</div>
-                <div className="mt-1 font-semibold">₦{formatAmount(v)}</div>
+                <div className="mt-1 font-semibold">${formatAmount(v)}</div>
               </div>
             ))
           ) : (

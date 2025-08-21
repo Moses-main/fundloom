@@ -19,7 +19,11 @@ const MyDonationsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await getMyDonations({ page: 1, limit: 10, status: "completed" });
+        const res = await getMyDonations({
+          page: 1,
+          limit: 10,
+          status: "completed",
+        });
         if (res?.success && (res as any).data) {
           const { donations: list, pagination } = (res as any).data as any;
           if (!cancelled) {
@@ -45,7 +49,11 @@ const MyDonationsPage: React.FC = () => {
     setLoadingMore(true);
     try {
       const next = page + 1;
-      const res = await getMyDonations({ page: next, limit: 10, status: "completed" });
+      const res = await getMyDonations({
+        page: next,
+        limit: 10,
+        status: "completed",
+      });
       if (res?.success && (res as any).data) {
         const { donations: list, pagination } = (res as any).data as any;
         setDonations((prev) => [...prev, ...(list || [])]);
@@ -72,7 +80,9 @@ const MyDonationsPage: React.FC = () => {
             <Inbox className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-base font-medium">No donations yet</p>
-          <p className="text-sm text-muted-foreground">When you donate to campaigns, they will show up here.</p>
+          <p className="text-sm text-muted-foreground">
+            When you donate to campaigns, they will show up here.
+          </p>
         </div>
       )}
       <div className="space-y-4">
@@ -92,7 +102,7 @@ const MyDonationsPage: React.FC = () => {
               </div>
               <div className="text-right">
                 <div className="font-semibold">
-                  ₦{Number(d.amount).toLocaleString()}
+                  ${Number(d.amount).toLocaleString()}
                 </div>
                 {d.message && (
                   <div className="text-sm text-muted-foreground max-w-md truncate">

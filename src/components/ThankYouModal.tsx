@@ -15,7 +15,7 @@ const ThankYouModal: React.FC = () => {
         </div>
         <h3 className="text-xl font-bold text-gray-900 mt-4">Thank you!</h3>
         <p className="text-sm text-gray-600 mt-2">
-          Your donation of ₦{formatAmount(showThankYou.amount)} has been
+          Your donation of ${formatAmount(showThankYou.amount)} has been
           received. A receipt will be sent (simulated).
         </p>
         <div className="mt-4">

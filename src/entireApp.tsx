@@ -627,7 +627,7 @@ const Entire: React.FC = () => {
                       Total Raised
                     </p>
                     <p className="text-3xl font-bold text-gray-900">
-                      ₦
+                      $
                       {formatAmount(
                         campaigns.reduce((s, c) => s + c.raised_amount, 0)
                       )}
@@ -779,10 +779,10 @@ const Entire: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium text-gray-900">
-                          ₦{formatAmount(campaign.raised_amount)} raised
+                          ${formatAmount(campaign.raised_amount)} raised
                         </span>
                         <span className="text-gray-600">
-                          of ₦{formatAmount(campaign.target_amount)}
+                          of ${formatAmount(campaign.target_amount)}
                         </span>
                       </div>
 
@@ -908,7 +908,7 @@ const Entire: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-sm font-semibold">
-                        ₦{formatAmount(d.total)}
+                        ${formatAmount(d.total)}
                       </div>
                     </div>
                   ))}
@@ -938,7 +938,7 @@ const Entire: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-sm font-semibold">
-                          ₦{formatAmount(c.raised_amount)}
+                          ${formatAmount(c.raised_amount)}
                         </div>
                       </div>
                     ))}
@@ -1013,8 +1013,8 @@ const Entire: React.FC = () => {
                     </div>
 
                     <div className="mt-3 text-sm text-gray-700">
-                      <strong>Raised:</strong> ₦
-                      {formatAmount(selectedCampaign.raised_amount)} / ₦
+                      <strong>Raised:</strong> $
+                      {formatAmount(selectedCampaign.raised_amount)} / $
                       {formatAmount(selectedCampaign.target_amount)}
                     </div>
 
@@ -1069,7 +1069,7 @@ const Entire: React.FC = () => {
                         >
                           <div className="text-gray-600">{k}</div>
                           <div className="mt-1 font-semibold">
-                            ₦{formatAmount(v)}
+                            ${formatAmount(v)}
                           </div>
                         </div>
                       )
@@ -1148,7 +1148,7 @@ const Entire: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-sm font-semibold">
-                          ₦{formatAmount(d.amount)}
+                          ${formatAmount(d.amount)}
                         </div>
                       </div>
                     ))}
@@ -1185,7 +1185,7 @@ const Entire: React.FC = () => {
                             {campaign?.title}
                           </h4>
                           <p className="text-sm text-gray-600 mb-2">
-                            ₦{formatAmount(donation.amount)} donated
+                            ${formatAmount(donation.amount)} donated
                           </p>
                           {donation.donor_message && (
                             <p className="text-sm text-gray-700 italic">
@@ -1252,7 +1252,7 @@ const Entire: React.FC = () => {
                 ></div>
               </div>
               <p className="text-sm text-gray-600">
-                ₦{formatAmount(selectedCampaign.raised_amount)} of ₦
+                ${formatAmount(selectedCampaign.raised_amount)} of $
                 {formatAmount(selectedCampaign.target_amount)} raised
               </p>
             </div>
@@ -1273,7 +1273,7 @@ const Entire: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Donation Amount (₦)
+                  Donation Amount ($)
                 </label>
                 <input
                   type="number"
@@ -1383,7 +1383,7 @@ const Entire: React.FC = () => {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mt-4">Thank you!</h3>
             <p className="text-sm text-gray-600 mt-2">
-              Your donation of ₦{formatAmount(showThankYou.amount)} has been
+              Your donation of ${formatAmount(showThankYou.amount)} has been
               received. A receipt will be sent (simulated).
             </p>
             <div className="mt-4">
@@ -1443,7 +1443,7 @@ const Entire: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Target Amount (₦)
+                    Target Amount ($)
                   </label>
                   <input
                     type="number"

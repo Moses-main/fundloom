@@ -59,7 +59,7 @@ const DonorList: React.FC = () => {
                   )}
                 </div>
                 <div className="text-sm font-semibold">
-                  ₦{formatAmount(d.amount)}
+                  ${formatAmount(d.amount)}
                 </div>
               </div>
             ))
@@ -78,7 +78,7 @@ const DonorList: React.FC = () => {
                 <div className="text-xs text-gray-500">{d.donor_message}</div>
               </div>
               <div className="text-sm font-semibold">
-                ₦{formatAmount(d.amount)}
+                ${formatAmount(d.amount)}
               </div>
             </div>
           ))

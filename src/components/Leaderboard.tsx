@@ -21,10 +21,12 @@ const Leaderboard: React.FC<{
                   <div className="text-sm font-medium text-foreground">
                     {d.name}
                   </div>
-                  <div className="text-xs text-muted-foreground">{d.address}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {d.address}
+                  </div>
                 </div>
               </div>
-              <div className="text-sm font-semibold">₦{d.total}</div>
+              <div className="text-sm font-semibold">${d.total}</div>
             </div>
           ))}
         </div>
@@ -43,7 +45,7 @@ const Leaderboard: React.FC<{
                   {c.total_donors} donors
                 </div>
               </div>
-              <div className="text-sm font-semibold">₦{c.raised_amount}</div>
+              <div className="text-sm font-semibold">${c.raised_amount}</div>
             </div>
           ))}
         </div>

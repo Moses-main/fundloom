@@ -195,10 +195,10 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="font-medium text-foreground">
-              ₦{formatAmount(campaign.raised_amount)} raised
+              ${formatAmount(campaign.raised_amount)} raised
             </span>
             <span className="text-muted-foreground">
-              of ₦{formatAmount(campaign.target_amount)}
+              of ${formatAmount(campaign.target_amount)}
             </span>
           </div>
 

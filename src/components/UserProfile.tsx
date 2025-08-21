@@ -60,7 +60,7 @@
 //               </p>
 //               <p className="text-sm text-gray-700 mt-1">
 //                 Amount Donated:{" "}
-//                 <strong>₦{formatAmount(donation.amount)}</strong>
+//                 <strong>${formatAmount(donation.amount)}</strong>
 //               </p>
 //             </div>
 //           </div>

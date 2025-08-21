@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 
 const AdminPage: React.FC = () => {
-  const { toast } = useToast();
+  const { show } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [basicToken, setBasicToken] = useState<string | null>(null);
@@ -35,13 +35,13 @@ const AdminPage: React.FC = () => {
     try {
       const token = btoa(`${username}:${password}`);
       setBasicToken(token);
-      toast({
+      show({
         type: "success",
         title: "Admin Auth",
         description: "Authenticated",
       });
     } catch {
-      toast({
+      show({
         type: "error",
         title: "Admin Auth",
         description: "Failed to encode credentials",
@@ -60,7 +60,7 @@ const AdminPage: React.FC = () => {
         setCampaigns((res as any).data.campaigns || []);
       }
     } catch (e: any) {
-      toast({
+      show({
         type: "error",
         title: "Fetch campaigns",
         description: e.message,
@@ -76,7 +76,7 @@ const AdminPage: React.FC = () => {
         setUsers((res as any).data.users || []);
       }
     } catch (e: any) {
-      toast({ type: "error", title: "Fetch users", description: e.message });
+      show({ type: "error", title: "Fetch users", description: e.message });
     }
   };
 
@@ -190,10 +190,10 @@ const AdminPage: React.FC = () => {
                       onClick={async () => {
                         try {
                           await adminApproveCampaign(c._id, authed);
-                          toast({ type: "success", title: "Approved" });
+                          show({ type: "success", title: "Approved" });
                           fetchCampaigns();
                         } catch (e: any) {
-                          toast({
+                          show({
                             type: "error",
                             title: "Approve failed",
                             description: e.message,
@@ -210,10 +210,10 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminDeactivateCampaign(c._id, authed);
-                            toast({ type: "success", title: "Deactivated" });
+                            show({ type: "success", title: "Deactivated" });
                             fetchCampaigns();
                           } catch (e: any) {
-                            toast({
+                            show({
                               type: "error",
                               title: "Deactivate failed",
                               description: e.message,
@@ -230,10 +230,10 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminActivateCampaign(c._id, authed);
-                            toast({ type: "success", title: "Activated" });
+                            show({ type: "success", title: "Activated" });
                             fetchCampaigns();
                           } catch (e: any) {
-                            toast({
+                            show({
                               type: "error",
                               title: "Activate failed",
                               description: e.message,
@@ -297,10 +297,10 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminUnlockUser(u._id, authed);
-                            toast({ type: "success", title: "Unlocked" });
+                            show({ type: "success", title: "Unlocked" });
                             fetchUsers();
                           } catch (e: any) {
-                            toast({
+                            show({
                               type: "error",
                               title: "Unlock failed",
                               description: e.message,
@@ -316,10 +316,14 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminLockUser(u._id, authed);
-                            toast({ type: "success", title: "Locked" });
+                            show({
+                              type: "success",
+                              title: "Locked",
+                              description: "User locked.",
+                            });
                             fetchUsers();
                           } catch (e: any) {
-                            toast({
+                            show({
                               type: "error",
                               title: "Lock failed",
                               description: e.message,
@@ -339,10 +343,14 @@ const AdminPage: React.FC = () => {
                           return;
                         try {
                           await adminDeleteUser(u._id, authed);
-                          toast({ type: "success", title: "Deleted" });
+                          show({
+                            type: "success",
+                            title: "Deleted",
+                            description: "User deleted.",
+                          });
                           fetchUsers();
                         } catch (e: any) {
-                          toast({
+                          show({
                             type: "error",
                             title: "Delete failed",
                             description: e.message,
