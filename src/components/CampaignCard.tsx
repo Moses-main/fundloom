@@ -450,9 +450,17 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => {
-                setSelectedCampaign(campaign);
-                setShowDonationModal(false);
-                setActiveTab("charity");
+                const backendId =
+                  (campaign as any).backendId || (campaign as any)._id;
+                if (!backendId) {
+                  setSelectedCampaign(campaign);
+                  setShowDonationModal(false);
+                  setActiveTab("charity");
+                  return;
+                }
+                navigate(
+                  `/campaigns/${encodeURIComponent(String(backendId))}/report`
+                );
               }}
               className="flex items-center space-x-1"
             >
