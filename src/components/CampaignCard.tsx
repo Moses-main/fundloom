@@ -476,8 +476,18 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
             <button
               title="Discuss"
               onClick={() => {
-                setSelectedCampaign(campaign);
-                setActiveTab("donate");
+                const backendId =
+                  (campaign as any).backendId || (campaign as any)._id;
+                if (!backendId) {
+                  setSelectedCampaign(campaign);
+                  setActiveTab("donate");
+                  return;
+                }
+                navigate(
+                  `/campaigns/${encodeURIComponent(
+                    String(backendId)
+                  )}/discussion`
+                );
               }}
             >
               <MessageSquare className="h-4 w-4 text-muted-foreground" />

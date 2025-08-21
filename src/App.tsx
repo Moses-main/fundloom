@@ -25,6 +25,9 @@ const DocsProtocol = lazy(() => import("./pages/DocsProtocol"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const CampaignDonorsPage = lazy(() => import("./pages/CampaignDonorsPage"));
 const CampaignReportPage = lazy(() => import("./pages/CampaignReportPage"));
+const CampaignDiscussionPage = lazy(
+  () => import("./pages/CampaignDiscussionPage")
+);
 import { LoadingProvider } from "./context/LoadingContext";
 import LoadingOverlay from "./components/ui/LoadingOverlay";
 
@@ -90,6 +93,10 @@ function App() {
                       <Route
                         path="/campaigns/:id/report"
                         element={<CampaignReportPage />}
+                      />
+                      <Route
+                        path="/campaigns/:id/discussion"
+                        element={<CampaignDiscussionPage />}
                       />
                       <Route
                         path="/profile"
