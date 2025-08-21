@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import CampaignCard from "@/components/CampaignCard";
 import { useAppContext } from "@/context/AppContext";
+import { Inbox } from "lucide-react";
 
 const MyCampaignsPage: React.FC = () => {
   const { hasJwt, user } = useAuth();
@@ -21,7 +22,10 @@ const MyCampaignsPage: React.FC = () => {
       setError(null);
       try {
         if (!userId) throw new Error("Missing user id");
-        const res = await getCampaignsByUser(userId, { status: "all", limit: 50 });
+        const res = await getCampaignsByUser(userId, {
+          status: "all",
+          limit: 50,
+        });
         if (res?.success && (res as any).data) {
           const { campaigns } = (res as any).data as any;
           if (!cancelled) setMyCampaigns(campaigns || []);
@@ -77,9 +81,16 @@ const MyCampaignsPage: React.FC = () => {
       {loading && <p className="text-muted-foreground">Loading...</p>}
       {error && <p className="text-red-600">{error}</p>}
       {!loading && !error && mapped.length === 0 && (
-        <p className="text-muted-foreground">
-          You have not created any campaigns yet.
-        </p>
+        <div className="border border-dashed border-border rounded-xl p-10 bg-muted/30 text-center space-y-3">
+          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <Inbox className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-base font-medium">No campaigns yet</p>
+
+          <p className="text-sm text-muted-foreground">
+            When you create campaigns, they will show up here.
+          </p>
+        </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {mapped.map((c) => (
