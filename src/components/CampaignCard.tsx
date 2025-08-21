@@ -226,12 +226,12 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           </div>
         </div>
 
-        <div className="mt-6 flex space-x-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           {(() => {
             const inactive = !campaign.is_active;
             const unapproved = (campaign as any).is_verified === false;
             const disabled = inactive || unapproved;
-            const btnClasses = `flex-1 py-3 rounded-xl font-medium transition-all shadow-lg ${
+            const btnClasses = `w-full sm:flex-1 py-3 rounded-xl font-medium transition-all shadow-lg ${
               disabled
                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                 : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 hover:shadow-xl"
@@ -336,7 +336,7 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                     `/campaigns/${encodeURIComponent(String(backendId))}/donors`
                   );
                 }}
-                className="px-4 py-3 rounded-xl font-medium bg-card border border-border hover:shadow-sm"
+                className="px-4 py-3 rounded-xl font-medium bg-card border border-border hover:shadow-sm w-full sm:w-auto flex-1 sm:flex-none"
                 title="View donors"
               >
                 View Donors
@@ -418,7 +418,7 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
                     });
                   }
                 }}
-                className="px-3 py-1 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700"
+                className="px-3 py-3 rounded-xl font-medium bg-green-600 text-white hover:bg-green-700 w-full sm:w-auto flex-1 sm:flex-none"
                 title="Withdraw funds"
               >
                 Withdraw
@@ -426,7 +426,7 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
             );
           })()}
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto order-last sm:order-none justify-end sm:justify-start sm:ml-auto">
             <button
               onClick={() => copyShareLink(campaign.id)}
               className="w-12 h-12 rounded-xl flex items-center justify-center bg-card border border-border hover:shadow-sm"

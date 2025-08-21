@@ -115,7 +115,7 @@ const PaymentMethodSelector: React.FC = () => {
     <div className="flex flex-wrap items-center gap-2">
       <button
         onClick={() => setSelectedPayment("crypto")}
-        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
           selectedPayment === "crypto"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -128,7 +128,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("card")}
-        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
           selectedPayment === "card"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -141,7 +141,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("bank")}
-        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
           selectedPayment === "bank"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -154,7 +154,7 @@ const PaymentMethodSelector: React.FC = () => {
       </button>
       <button
         onClick={() => setSelectedPayment("mobile")}
-        className={`px-3 py-2 rounded-xl border min-w-[110px] ${
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
           selectedPayment === "mobile"
             ? "bg-blue-50 border-blue-200"
             : "bg-white border-gray-200"
@@ -198,7 +198,7 @@ const DonationModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-gray-900">Make a Donation</h3>
           <button
@@ -211,7 +211,7 @@ const DonationModal: React.FC = () => {
                 window.history.replaceState({}, "", cleanUrl);
               }
             }}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 w-9 h-9 -mr-1 flex items-center justify-center rounded-full hover:bg-gray-100"
           >
             ×
           </button>

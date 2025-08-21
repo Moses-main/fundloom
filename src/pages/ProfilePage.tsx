@@ -36,7 +36,6 @@ const ProfilePage: React.FC = () => {
   const { show: toast } = useToast();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  // Preload from localStorage if available for instant accuracy
   const initialUser = (() => {
     try {
       const raw = localStorage.getItem("auth_user");
