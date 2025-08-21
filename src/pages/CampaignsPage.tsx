@@ -6,6 +6,8 @@ import SearchFilterBar from "../components/SearchFilterBar";
 import CampaignList from "../components/CampaignList";
 import Leaderboard from "../components/Leaderboard";
 
+// Wallet summary removed from overview; shown on Profile tab instead
+
 const CampaignsPage: React.FC = () => {
   const { campaigns, donations, leaderboard } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,6 +34,7 @@ const CampaignsPage: React.FC = () => {
   return (
     <div>
       <CampaignStats />
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 space-y-4 md:space-y-0">
         <SearchFilterBar
           searchTerm={searchTerm}

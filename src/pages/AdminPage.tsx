@@ -190,7 +190,11 @@ const AdminPage: React.FC = () => {
                       onClick={async () => {
                         try {
                           await adminApproveCampaign(c._id, authed);
-                          show({ type: "success", title: "Approved" });
+                          show({
+                            type: "success",
+                            title: "Approved",
+                            description: "Campaign has been approved.",
+                          });
                           fetchCampaigns();
                         } catch (e: any) {
                           show({
@@ -210,7 +214,11 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminDeactivateCampaign(c._id, authed);
-                            show({ type: "success", title: "Deactivated" });
+                            show({
+                              type: "success",
+                              title: "Deactivated",
+                              description: "Campaign has been deactivated.",
+                            });
                             fetchCampaigns();
                           } catch (e: any) {
                             show({
@@ -230,7 +238,11 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminActivateCampaign(c._id, authed);
-                            show({ type: "success", title: "Activated" });
+                            show({
+                              type: "success",
+                              title: "Activated",
+                              description: "Campaign has been activated.",
+                            });
                             fetchCampaigns();
                           } catch (e: any) {
                             show({
@@ -297,7 +309,11 @@ const AdminPage: React.FC = () => {
                         onClick={async () => {
                           try {
                             await adminUnlockUser(u._id, authed);
-                            show({ type: "success", title: "Unlocked" });
+                            show({
+                              type: "success",
+                              title: "Unlocked",
+                              description: "User has been unlocked.",
+                            });
                             fetchUsers();
                           } catch (e: any) {
                             show({

@@ -23,6 +23,7 @@ import {
   Moon,
   Link as LinkIcon,
   Trash2,
+  Copy as CopyIcon,
 } from "lucide-react";
 
 interface ProfileData {
@@ -63,6 +64,12 @@ const ProfilePage: React.FC = () => {
   }>({ totalDonated: 0, totalDonations: 0 });
   const [prefEmailNotif, setPrefEmailNotif] = useState(true);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [primaryWallet, setPrimaryWallet] = useState<string | null>(
+    initialUser?.walletAddress || null
+  );
+  const [wallets, setWallets] = useState<
+    Array<{ provider?: string; chainType?: string; address: string }>
+  >([]);
   // Password fields
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -148,6 +155,8 @@ const ProfilePage: React.FC = () => {
             setPrefEmailNotif(!!u.preferences.emailNotifications);
           }
           setGoogleConnected(!!u.oauth?.google?.id);
+          if (u.walletAddress) setPrimaryWallet(u.walletAddress);
+          if (Array.isArray(u.wallets)) setWallets(u.wallets);
         }
         // Load dashboard stats
         const dash = await getUserDashboard();
@@ -436,6 +445,98 @@ const ProfilePage: React.FC = () => {
               Manage
             </Button>
           </div>
+
+          {/* Wallets */}
+          <div className="mt-6">
+            <h3 className="font-semibold mb-2">Wallets</h3>
+            {primaryWallet ? (
+              <div className="border rounded-md p-4 mb-3">
+                <div className="text-sm text-gray-500 mb-1">Primary (EVM)</div>
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-sm break-all">
+                    {primaryWallet.slice(0, 10)}...{primaryWallet.slice(-8)}
+                  </code>
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(primaryWallet!);
+                        toast({
+                          type: "success",
+                          title: "Copied",
+                          description: "Address copied",
+                        });
+                      } catch {}
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <CopyIcon className="h-4 w-4" /> Copy
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500 mb-3">
+                No primary wallet yet.
+              </div>
+            )}
+
+            {/* Additional wallets collapsible */}
+            {wallets.filter(
+              (w) =>
+                !primaryWallet ||
+                w.address?.toLowerCase() !== primaryWallet.toLowerCase()
+            ).length > 0 && (
+              <details className="border rounded-md p-4">
+                <summary className="cursor-pointer select-none font-medium">
+                  Additional wallets
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {wallets
+                    .filter(
+                      (w) =>
+                        !primaryWallet ||
+                        w.address?.toLowerCase() !== primaryWallet.toLowerCase()
+                    )
+                    .map((w, idx) => (
+                      <div
+                        key={`${w.address}-${idx}`}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">
+                            {w.provider || "wallet"} • {w.chainType || "chain"}
+                          </div>
+                          <code className="text-sm break-all">
+                            {w.address?.slice(0, 10)}...{w.address?.slice(-8)}
+                          </code>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(w.address);
+                              toast({
+                                type: "success",
+                                title: "Copied",
+                                description: "Address copied",
+                              });
+                            } catch {}
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <CopyIcon className="h-4 w-4" /> Copy
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              </details>
+            )}
+            <p className="text-xs text-gray-500 mt-3">
+              Wallets are provisioned automatically for new accounts. Private
+              keys for Privy wallets are managed by Privy and are not exposed.
+            </p>
+          </div>
         </div>
 
         {/* Security */}
@@ -572,141 +673,3 @@ const ProfilePage: React.FC = () => {
 };
 
 export default ProfilePage;
-
-// src/pages/ProfilePage.tsx
-
-// import React from "react";
-// import { Link } from "react-router-dom";
-// import { useAppContext } from "../context/AppContext";
-// import { DollarSign, Clock, CreditCard, User } from "lucide-react";
-// import { Button } from "../components/ui/Button";
-
-// const ProfilePage: React.FC = () => {
-//   const {
-//     walletConnected,
-//     userAddress,
-//     donations,
-//     campaigns,
-//     formatAmount,
-//     formatDate,
-//     connectWallet,
-//   } = useAppContext();
-
-//   // Determine if user has JWT session (email/password auth)
-//   let authedUser: { fullname?: string; name?: string; email?: string } | null =
-//     null;
-//   let hasJwt = false;
-//   try {
-//     const token = localStorage.getItem("auth_token");
-//     const rawUser = localStorage.getItem("auth_user");
-//     if (token && rawUser) {
-//       hasJwt = true;
-//       authedUser = JSON.parse(rawUser);
-//     }
-//   } catch {}
-
-//   if (!walletConnected && !hasJwt) {
-//     return (
-//       <div className="text-center py-16 space-y-4">
-//         <p className="text-lg">
-//           Please sign in or connect your wallet to view your profile.
-//         </p>
-//         <div className="flex items-center justify-center gap-3">
-//           <Button asChild>
-//             <Link to="/auth">Sign In</Link>
-//           </Button>
-//           <Button variant="outline" onClick={connectWallet}>
-//             Connect Wallet
-//           </Button>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   const myDonations = walletConnected
-//     ? donations.filter((d) => d.donor_address === userAddress)
-//     : [];
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Profile summary */}
-//       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-//         <div className="flex items-center gap-4">
-//           <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-//             <User className="h-6 w-6 text-muted-foreground" />
-//           </div>
-//           <div>
-//             <h2 className="text-xl font-semibold text-gray-900">
-//               {authedUser?.fullname ||
-//                 authedUser?.name ||
-//                 (walletConnected ? userAddress : "User")}
-//             </h2>
-//             <p className="text-sm text-gray-600">
-//               {authedUser?.email ||
-//                 (walletConnected
-//                   ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
-//                   : "")}
-//             </p>
-//           </div>
-//         </div>
-//       </div>
-
-//       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-//         <h2 className="text-2xl font-bold text-gray-900 mb-6">
-//           Your Donation History
-//         </h2>
-//         <div className="space-y-4">
-//           {walletConnected &&
-//             myDonations.map((d) => {
-//               const campaign = campaigns.find((c) => c.id === d.campaign_id);
-//               return (
-//                 <div
-//                   key={d.id}
-//                   className="flex items-start space-x-4 p-4 border border-gray-200 rounded-xl"
-//                 >
-//                   <div className="bg-green-100 p-2 rounded-lg">
-//                     <DollarSign className="h-5 w-5 text-green-600" />
-//                   </div>
-//                   <div className="flex-1">
-//                     <h4 className="font-semibold text-gray-900">
-//                       {campaign?.title}
-//                     </h4>
-//                     <p className="text-sm text-gray-600 mb-2">
-//                       ${formatAmount(d.amount)} donated
-//                     </p>
-//                     {d.donor_message && (
-//                       <p className="text-sm text-gray-700 italic">
-//                         "{d.donor_message}"
-//                       </p>
-//                     )}
-//                     <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-//                       <div className="flex items-center space-x-1">
-//                         <Clock className="h-3 w-3" />
-//                         <span>{formatDate(d.timestamp)}</span>
-//                       </div>
-//                       <div className="flex items-center space-x-1">
-//                         <CreditCard className="h-3 w-3" />
-//                         <span>{d.payment_method}</span>
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-//               );
-//             })}
-//           {!walletConnected && (
-//             <div className="text-sm text-gray-500">
-//               Connect your wallet to see your on-chain donation history.
-//             </div>
-//           )}
-//           {walletConnected && myDonations.length === 0 && (
-//             <div className="text-sm text-gray-500">
-//               You have not made any donations yet.
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default ProfilePage;
