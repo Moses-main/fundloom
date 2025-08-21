@@ -524,18 +524,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       // CRYPTO FLOW: send ETH directly to the campaign's wallet address
       if (selectedPayment === "crypto") {
-        const to = selectedCampaign.charity_address;
-        if (!to || !/^0x[a-fA-F0-9]{40}$/.test(to)) {
+        // Determine recipient address with fallback to user's Privy wallet
+        const isValidEthAddress = (addr?: string | null) =>
+          !!addr && /^0x[a-fA-F0-9]{40}$/.test(addr);
+
+        let to: string | undefined = selectedCampaign.charity_address;
+
+        if (!isValidEthAddress(to)) {
+          // Fallback: try Privy/EVM wallet attached to authenticated user
+          try {
+            const raw = localStorage.getItem("auth_user");
+            if (raw) {
+              const user = JSON.parse(raw);
+              if (isValidEthAddress(user?.walletAddress)) {
+                to = user.walletAddress;
+              } else if (
+                Array.isArray(user?.wallets) &&
+                isValidEthAddress(user.wallets[0]?.address)
+              ) {
+                to = user.wallets[0].address;
+              }
+            }
+          } catch {}
+        }
+
+        if (!isValidEthAddress(to)) {
           toast({
             type: "warning",
             title: "Invalid recipient",
-            description: "Campaign wallet address is missing or invalid.",
+            description:
+              "Campaign wallet address is missing or invalid, and no default wallet was found.",
           });
           return;
         }
+
         // Send on-chain transaction via injected wallet
         const txHash = await loadingBus.wrap(
-          () => sendEth({ to, amountEth: donationAmount }),
+          () => sendEth({ to: to!, amountEth: donationAmount }),
           "crypto-tx"
         );
 
@@ -732,7 +757,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const buildSocialLinks = (c: Campaign) => {
     const stableId = (c as any).backendId || (c as any)._id || c.id;
-    const base = `${window.location.origin}/?campaign=${encodeURIComponent(String(stableId))}`;
+    const base = `${window.location.origin}/?campaign=${encodeURIComponent(
+      String(stableId)
+    )}`;
     const text = encodeURIComponent(`${c.title} — ${c.description}`);
     return {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
