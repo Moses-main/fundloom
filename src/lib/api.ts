@@ -162,11 +162,21 @@ export async function forgotPassword(input: { email: string }) {
 export function setAuth(auth: AuthPayload) {
   localStorage.setItem("auth_token", auth.token);
   localStorage.setItem("auth_user", JSON.stringify(auth.user));
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth_changed"));
+    }
+  } catch {}
 }
 
 export function clearAuth() {
   localStorage.removeItem("auth_token");
   localStorage.removeItem("auth_user");
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth_changed"));
+    }
+  } catch {}
 }
 
 // ---------- Backend data types (subset) ----------

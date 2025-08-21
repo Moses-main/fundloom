@@ -9,6 +9,9 @@ export type AuthUser = {
   name?: string;
   email?: string;
   role?: string;
+  // Optional wallet fields hydrated from backend /auth/me
+  walletAddress?: string | null;
+  wallets?: Array<{ provider?: string; chainType?: string; address: string }>;
 };
 
 export type AuthContextType = {
@@ -80,8 +83,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch {}
       }
     };
+    const onAuthChanged = () => {
+      try {
+        const t = localStorage.getItem("auth_token");
+        const u = localStorage.getItem("auth_user");
+        setToken(t);
+        if (u) {
+          const parsed = JSON.parse(u);
+          const normalized = parsed && typeof parsed === "object" ? { ...parsed, id: parsed.id || parsed._id } : parsed;
+          setUser(normalized);
+        } else {
+          setUser(null);
+        }
+      } catch {}
+    };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("auth_changed", onAuthChanged as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("auth_changed", onAuthChanged as EventListener);
+    };
   }, []);
 
   // Detect EVM wallet (MetaMask) connection + listen for changes

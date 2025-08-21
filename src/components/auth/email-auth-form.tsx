@@ -18,7 +18,7 @@ import {
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { forgotPassword } from "@/lib/api";
-import { loginWithEmail, registerWithEmail } from "@/services/auth/jwtAuth";
+import { login as loginEmailPwd, signup as signupEmailPwd } from "@/modules/auth/emailPassword";
 import { startGoogleOAuth } from "@/services/auth/oauthAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -55,29 +55,45 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
   const location = useLocation();
   const { show: toast } = useToast();
 
+  const paramsInit = new URLSearchParams(location.search);
+  const emailPrefill = paramsInit.get("email") || "";
+
   const form = useForm<LoginFormData | SignupFormData>({
     resolver: zodResolver(mode === "login" ? loginSchema : signupSchema),
     defaultValues:
       mode === "login"
-        ? { email: "", password: "" }
+        ? { email: emailPrefill, password: "" }
         : { name: "", email: "", password: "", confirmPassword: "" },
   });
+
+  // Reset form defaults when switching between login/signup or when email query changes
+  useEffect(() => {
+    if (mode === "login") {
+      form.reset({ email: emailPrefill, password: "" } as any);
+    } else {
+      form.reset({ name: "", email: "", password: "", confirmPassword: "" } as any);
+    }
+  }, [mode, emailPrefill]);
 
   const onSubmit = async (data: LoginFormData | SignupFormData) => {
     setIsLoading(true);
     try {
+      const params = new URLSearchParams(location.search);
       if (mode === "signup") {
-        const { name, email, password } = data as SignupFormData;
-        await registerWithEmail({ name, email, password });
-        toast({ type: "success", title: "Account created", description: "Welcome to Fundloom" });
+        const { name, email, password, confirmPassword } = data as SignupFormData;
+        const result = await signupEmailPwd({ name, email, password, confirmPassword });
+        toast({ type: "success", title: "Account created", description: "Please sign in to continue" });
+        // After signup, always go to login with email prefilled
+        navigate(result.next || `/auth?mode=login&email=${encodeURIComponent(email)}`, { replace: true });
+        return;
       } else {
         const { email, password } = data as LoginFormData;
-        await loginWithEmail({ email, password });
+        const { next } = await loginEmailPwd({ email, password });
         toast({ type: "success", title: "Signed in", description: "Login successful" });
+        const override = params.get("next");
+        navigate(override || next || "/dashboard?tab=overview", { replace: true });
+        return;
       }
-      const params = new URLSearchParams(location.search);
-      const next = params.get("next") || "/dashboard";
-      navigate(next, { replace: true });
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Authentication failed";
       console.error("Authentication error:", error);

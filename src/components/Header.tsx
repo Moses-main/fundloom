@@ -79,7 +79,7 @@ export const Header: React.FC = () => {
         <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
           {isDashboard ? (
             <div className="flex items-center gap-2">
-              {["overview", "donated", "profile", "campaigns"].map((tab) => {
+              {(["overview", "donated", "profile", "campaigns", "wallet"] as const).map((tab) => {
                 return (
                   <button
                     key={tab}
@@ -228,8 +228,6 @@ export const Header: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
       {isMenuOpen && (
         <div
           className="md:hidden fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
@@ -244,9 +242,7 @@ export const Header: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-2 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Menu
-                </span>
+                <span className="text-sm font-medium text-muted-foreground">Menu</span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -258,7 +254,7 @@ export const Header: React.FC = () => {
               </div>
               {isDashboard ? (
                 <>
-                  {["overview", "donated", "profile", "campaigns"].map(
+                  {["overview", "donated", "profile", "campaigns", "wallet"].map(
                     (tab) => (
                       <button
                         key={tab}
@@ -268,7 +264,7 @@ export const Header: React.FC = () => {
                           setIsMenuOpen(false);
                         }}
                         className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
-                          activeTab === tab ? "bg-muted/60" : ""
+                          activeTab === (tab as any) ? "bg-muted/60" : ""
                         }`}
                       >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -300,7 +296,7 @@ export const Header: React.FC = () => {
                         Logout
                       </Button>
                     )}
-                    {!walletConnected && !hasJwt && (
+                    {!walletConnected && !hasJwt && !isAuthed && (
                       <div className="w-full">
                         <WalletConnectorModal />
                       </div>
@@ -333,11 +329,7 @@ export const Header: React.FC = () => {
                   <div className="pt-2 grid grid-cols-2 gap-2">
                     {hasJwt ? (
                       <>
-                        <Button
-                          className="w-full"
-                          asChild
-                          onClick={() => setIsMenuOpen(false)}
-                        >
+                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
                           <Link to="/profile">Profile</Link>
                         </Button>
                         {walletConnected && (
@@ -382,11 +374,7 @@ export const Header: React.FC = () => {
                             Sign In
                           </Link>
                         </Button>
-                        <Button
-                          className="w-full"
-                          asChild
-                          onClick={() => setIsMenuOpen(false)}
-                        >
+                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
                           <Link to="/auth?mode=signup">Create</Link>
                         </Button>
                       </>

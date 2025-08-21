@@ -174,7 +174,7 @@ const SEED_COMMENTS: Comment[] = [
 
 /* ------------------- Context shape -------------------- */
 export interface AppContextType {
-  activeTab: "overview" | "campaigns" | "donated" | "profile";
+  activeTab: "overview" | "campaigns" | "donated" | "profile" | "wallet";
   setActiveTab: (t: AppContextType["activeTab"]) => void;
 
   campaigns: Campaign[];
@@ -356,6 +356,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             : {},
           // @ts-ignore attach backend id for downstream operations
           backendId: bc._id,
+          // @ts-ignore attach evm linkage (chainId, contract, campaignId)
+          evm: bc.evm || null,
           // @ts-ignore creator id for ownership filtering
           creatorId: bc.creator?._id || bc.ownerId || null,
         }));

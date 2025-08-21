@@ -8,6 +8,7 @@ import ThankYouModal from "../components/ThankYouModal";
 import CreateCampaignModal from "../components/CreateCampaignModal";
 import MyDonationsPage from "@/pages/MyDonationsPage";
 import MyCampaignsPage from "@/pages/MyCampaignsPage";
+import WalletTab from "@/pages/WalletTab";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Link } from "react-router-dom";
@@ -28,6 +29,7 @@ const Shell: React.FC = () => {
         {activeTab === "overview" && <CampaignsPage />}
         {activeTab === "donated" && <MyDonationsPage />}
         {activeTab === "profile" && <ProfilePage />}
+        {activeTab === "wallet" && <WalletTab />}
         {activeTab === "campaigns" && (
           user?.id ? (
             <MyCampaignsPage />

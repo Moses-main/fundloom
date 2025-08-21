@@ -10,6 +10,15 @@ import {
 } from "ethers";
 import ABI from "../abi/ABI.json" assert { type: "json" };
 
+// Minimal ERC20 ABI fragments
+const ERC20_ABI = [
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function balanceOf(address owner) view returns (uint256)",
+];
+
 export type EvmConnectResult = {
   address: string;
   chainId: string;
@@ -104,5 +113,74 @@ export async function switchOrAddChain(target: {
       return;
     }
     throw err;
+  }
+}
+
+// --- ERC20 & signing helpers ---
+export async function getTokenMeta(tokenAddress: string) {
+  const provider = await ensureProvider();
+  const erc20 = new Contract(tokenAddress, ERC20_ABI, provider);
+  const [decimals, symbol] = await Promise.all([
+    erc20.decimals(),
+    erc20.symbol(),
+  ]);
+  return { decimals: Number(decimals), symbol: String(symbol) };
+}
+
+export async function ensureAllowance(
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+  required: bigint
+) {
+  const provider = await ensureProvider();
+  const signer = await provider.getSigner();
+  const erc20 = new Contract(tokenAddress, ERC20_ABI, signer);
+  const current: bigint = await erc20.allowance(owner, spender);
+  if (current >= required) return;
+  const tx = await erc20.approve(spender, required);
+  await tx.wait();
+}
+
+export async function donateErc20(params: {
+  contractAddress: string;
+  campaignId: bigint | number | string;
+  tokenAddress: string;
+  amount: bigint; // raw token units
+}): Promise<string> {
+  const provider = await ensureProvider();
+  const signer = await provider.getSigner();
+  const contract = new Contract(params.contractAddress, ABI as any, signer);
+  const tx = await contract.donateERC20(
+    BigInt(params.campaignId),
+    params.tokenAddress,
+    params.amount
+  );
+  const receipt = await tx.wait();
+  return receipt?.hash || tx.hash;
+}
+
+export async function signDonationMessage(message: string) {
+  const provider = await ensureProvider();
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress();
+  const signature = await signer.signMessage(message);
+  return { address: getAddress(address), signature };
+}
+
+export async function requireChain(
+  chainIdHex: string,
+  addParams?: {
+    rpcUrls?: string[];
+    chainName?: string;
+    nativeCurrency?: { name: string; symbol: string; decimals: number };
+    blockExplorerUrls?: string[];
+  }
+) {
+  try {
+    await switchOrAddChain({ chainIdHex: chainIdHex, ...addParams });
+  } catch (e) {
+    // surface error to caller
+    throw e;
   }
 }
