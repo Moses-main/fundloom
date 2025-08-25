@@ -403,8 +403,8 @@ const CreateCampaignModal: React.FC = () => {
       title: "Campaign created",
       description: "Your campaign has been created successfully.",
     });
-    // Redirect to My Campaigns page instead of appending ?campaign=
-    navigate("/my-campaigns", { replace: false });
+    // Redirect to dashboard with campaigns tab active
+    navigate("/dashboard?tab=campaigns", { replace: true });
   };
 
   return (

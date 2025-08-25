@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,7 +18,10 @@ import {
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { forgotPassword } from "@/lib/api";
-import { login as loginEmailPwd, signup as signupEmailPwd } from "@/modules/auth/emailPassword";
+import {
+  login as loginEmailPwd,
+  signup as signupEmailPwd,
+} from "@/modules/auth/emailPassword";
 import { startGoogleOAuth } from "@/services/auth/oauthAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -71,7 +74,12 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
     if (mode === "login") {
       form.reset({ email: emailPrefill, password: "" } as any);
     } else {
-      form.reset({ name: "", email: "", password: "", confirmPassword: "" } as any);
+      form.reset({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      } as any);
     }
   }, [mode, emailPrefill]);
 
@@ -80,22 +88,42 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
     try {
       const params = new URLSearchParams(location.search);
       if (mode === "signup") {
-        const { name, email, password, confirmPassword } = data as SignupFormData;
-        const result = await signupEmailPwd({ name, email, password, confirmPassword });
-        toast({ type: "success", title: "Account created", description: "Please sign in to continue" });
+        const { name, email, password, confirmPassword } =
+          data as SignupFormData;
+        const result = await signupEmailPwd({
+          name,
+          email,
+          password,
+          confirmPassword,
+        });
+        toast({
+          type: "success",
+          title: "Account created",
+          description: "Please sign in to continue",
+        });
         // After signup, always go to login with email prefilled
-        navigate(result.next || `/auth?mode=login&email=${encodeURIComponent(email)}`, { replace: true });
+        navigate(
+          result.next || `/auth?mode=login&email=${encodeURIComponent(email)}`,
+          { replace: true }
+        );
         return;
       } else {
         const { email, password } = data as LoginFormData;
         const { next } = await loginEmailPwd({ email, password });
-        toast({ type: "success", title: "Signed in", description: "Login successful" });
+        toast({
+          type: "success",
+          title: "Signed in",
+          description: "Login successful",
+        });
         const override = params.get("next");
-        navigate(override || next || "/dashboard?tab=overview", { replace: true });
+        navigate(override || next || "/dashboard?tab=overview", {
+          replace: true,
+        });
         return;
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Authentication failed";
+      const msg =
+        error instanceof Error ? error.message : "Authentication failed";
       console.error("Authentication error:", error);
       toast({ type: "error", title: "Auth error", description: msg });
     } finally {
@@ -276,18 +304,35 @@ export function EmailAuthForm({ mode }: EmailAuthFormProps) {
               onClick={async () => {
                 const email = (form.getValues() as any).email as string;
                 if (!email) {
-                  toast({ type: "warning", title: "Enter email", description: "Please enter your email above first" });
+                  toast({
+                    type: "warning",
+                    title: "Enter email",
+                    description: "Please enter your email above first",
+                  });
                   return;
                 }
                 try {
                   const res = await forgotPassword({ email });
                   if (res?.resetToken) {
-                    toast({ type: "info", title: "Reset token generated", description: `Dev token: ${res.resetToken}` });
+                    toast({
+                      type: "info",
+                      title: "Reset token generated",
+                      description: `Dev token: ${res.resetToken}`,
+                    });
                   } else {
-                    toast({ type: "success", title: "Email sent", description: "Password reset link sent if the email exists" });
+                    toast({
+                      type: "success",
+                      title: "Email sent",
+                      description:
+                        "Password reset link sent if the email exists",
+                    });
                   }
                 } catch (e: any) {
-                  toast({ type: "error", title: "Reset failed", description: e?.message || "Could not start password reset" });
+                  toast({
+                    type: "error",
+                    title: "Reset failed",
+                    description: e?.message || "Could not start password reset",
+                  });
                 }
               }}
             >
