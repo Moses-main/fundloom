@@ -5,19 +5,18 @@ export const FUNDLOOM_CONTRACT_ADDRESS = '0xYOUR_CONTRACT_ADDRESS';
 // This is a simplified ABI that includes only the functions we need
 export const FUNDLOOM_ABI = [
   {
-    "name": "donate",
     "type": "function",
+    "name": "donate",
     "inputs": [
       {
         "name": "campaign_id",
-        "type": "felt"
+        "type": "core::felt252"
       }
     ],
     "outputs": [],
-    "stateMutability": "payable"
-  },
-  // Add other necessary ABI entries here
-];
+    "state_mutability": "external"
+  }
+] as const;
 
 // Network configuration
 export const NETWORK = {

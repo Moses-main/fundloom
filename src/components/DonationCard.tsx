@@ -1,11 +1,13 @@
 // src/components/DonationCard.tsx
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/Progress";
-import { Heart, Share2, CreditCard, Wallet } from "lucide-react";
-import { useState } from "react";
+import { Heart, Share2, CreditCard, Wallet, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "./ui/ToastProvider";
 import { useNavigate } from "react-router-dom";
+import { useContract, useAccount } from "@starknet-react/core";
+import { FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI } from "../config/contracts";
 
 type PaymentMethod = 'crypto' | 'card' | 'bank';
 
@@ -20,13 +22,51 @@ interface DonationCardProps {
   };
 }
 
+// Helper function to convert ETH to Wei (1 ETH = 1e18 Wei)
+const toWei = (eth: string): string => {
+  try {
+    return number.toFelt(Number(eth) * 1e18);
+  } catch (error) {
+    console.error('Error converting to wei:', error);
+    return '0';
+  }
+};
+
 export function DonationCard({ campaign }: DonationCardProps) {
   const [donationAmount, setDonationAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto');
   const [isDonating, setIsDonating] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | undefined>();
+  
   const { isAuthenticated } = useAuth();
   const { show: showToast } = useToast();
   const navigate = useNavigate();
+  
+  // Get the connected account
+  const { account } = useAccount();
+  
+  // Initialize the contract
+  const { contract } = useContract({
+    abi: FUNDLOOM_ABI,
+    address: FUNDLOOM_CONTRACT_ADDRESS,
+  });
+  
+  // Effect to handle transaction status
+  useEffect(() => {
+    if (transactionHash) {
+      showToast({
+        title: "Transaction Submitted",
+        description: `Your donation of ${donationAmount} ETH has been submitted.`
+      });
+      
+      // Refresh the page after a delay to show updated campaign data
+      const timer = setTimeout(() => {
+        window.location.reload();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [transactionHash, donationAmount, showToast]);
   const progress = Math.min(
     (campaign.raised_amount / campaign.target_amount) * 100,
     100
@@ -42,61 +82,71 @@ export function DonationCard({ campaign }: DonationCardProps) {
     if (!donationAmount) {
       showToast({
         title: "Error",
-        description: "Please enter a donation amount",
-        type: "error",
+        description: "Please enter a donation amount"
       });
       return;
     }
-
-    const amount = parseFloat(donationAmount);
-    if (isNaN(amount) || amount <= 0) {
-      showToast({
-        title: "Error",
-        description: "Please enter a valid donation amount",
-        type: "error",
-      });
-      return;
-    }
-
+    
     if (paymentMethod === 'crypto' && !isAuthenticated) {
-      navigate('/auth', { state: { from: window.location.pathname } });
+      showToast({
+        title: "Authentication Required",
+        description: "Please connect your wallet to make a crypto donation"
+      });
+      navigate('/auth');
       return;
     }
-
+    
     setIsDonating(true);
-
+    
     try {
       if (paymentMethod === 'crypto') {
-        // Handle crypto donation
-        // This would be replaced with actual smart contract interaction
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          // Convert ETH amount to Wei (1 ETH = 1e18 Wei)
+          const amountInWei = (Number(donationAmount) * 1e18).toString();
+          
+          // Execute the contract call
+          const tx = await contract?.donate(
+            campaign.id.toString(),
+            { value: amountInWei }
+          );
+          
+          // Store the transaction hash to show to the user
+          if (tx?.transaction_hash) {
+            setTransactionHash(tx.transaction_hash);
+          }
         
         showToast({
           title: "Transaction Submitted!",
-          description: "Your donation is being processed on the blockchain.",
-          type: "success",
+          description: "Your donation is being processed on the blockchain."
         });
       } else {
-        // Handle fiat payment
+        // For fiat payments, we'll handle this differently (e.g., Stripe integration)
+        // For now, we'll just show a success message
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         showToast({
-          title: "Thank you!",
-          description: `Your ${paymentMethod} donation of $${donationAmount} has been received.`,
-          type: "success",
+          title: "Thank you for your donation!",
+          description: `You've successfully donated $${donationAmount} to this campaign.`
         });
       }
       
+      // Reset the form
       setDonationAmount("");
-      window.location.reload(); // Refresh to show updated donation amount
       
-    } catch (error) {
-      console.error("Donation error:", error);
-      showToast({
-        title: "Error",
-        description: "Failed to process donation. Please try again.",
-        type: "error",
-      });
+      // In a real app, you might want to update the UI without a full page reload
+      // For now, we'll just show the transaction status
+      } catch (error) {
+        console.error("Donation error:", error);
+        
+        let errorMessage = "There was an error processing your donation. Please try again.";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        
+        showToast({
+          title: "Donation Failed",
+          description: errorMessage
+        });
     } finally {
       setIsDonating(false);
     }
@@ -106,9 +156,32 @@ export function DonationCard({ campaign }: DonationCardProps) {
     <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Make a Donation</h3>
-        <button className="text-gray-500 hover:text-gray-700">
-          <Share2 className="w-5 h-5" />
-        </button>
+        <div className="flex space-x-2">
+          <button 
+            className="text-gray-500 hover:text-gray-700"
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              showToast({
+                title: "Link Copied!",
+                description: "Campaign link copied to clipboard.",
+                type: "success",
+              });
+            }}
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
+          {transactionHash && (
+            <a 
+              href={`https://voyager.online/tx/${transactionHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:text-indigo-800"
+              title="View on Voyager"
+            >
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -247,9 +320,14 @@ export function DonationCard({ campaign }: DonationCardProps) {
         </Button>
       </form>
 
-      {!isAuthenticated && (
+      {paymentMethod === 'crypto' && !isAuthenticated && (
         <p className="text-xs text-center text-gray-500">
-          You'll need to sign in to make a donation
+          Connect your wallet to make a crypto donation
+        </p>
+      )}
+      {paymentMethod === 'card' && !isAuthenticated && (
+        <p className="text-xs text-center text-gray-500">
+          Sign in to make a credit/debit card donation
         </p>
       )}
     </div>

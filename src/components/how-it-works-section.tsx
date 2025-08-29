@@ -91,8 +91,8 @@ export function HowItWorksSection() {
                   </div>
                   <div className="absolute -top-4 -right-4 flex items-center justify-center">
                     <div className="relative">
-                      <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-teal-500 to-teal-300 blur-sm opacity-70" />
-                      <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-teal-600 text-white text-base font-extrabold font-mono ring-4 ring-white/70 shadow-md">
+                      <div className="absolute -inset-1 rounded-full  blur-sm opacity-70" />
+                      <div className="relative flex h-10 w-10 items-center mt-10 mr-10 justify-center rounded-full bg-teal-600 text-white text-base font-extrabold font-mono ring-4 ring-white/70 shadow-md">
                         {index + 1}
                       </div>
                     </div>
