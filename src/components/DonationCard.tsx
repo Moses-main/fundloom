@@ -1,10 +1,13 @@
 // src/components/DonationCard.tsx
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/Progress";
-import { Heart, Share2 } from "lucide-react";
+import { Heart, Share2, CreditCard, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "./ui/ToastProvider";
+import { useNavigate } from "react-router-dom";
+
+type PaymentMethod = 'crypto' | 'card' | 'bank';
 
 interface DonationCardProps {
   campaign: {
@@ -19,9 +22,11 @@ interface DonationCardProps {
 
 export function DonationCard({ campaign }: DonationCardProps) {
   const [donationAmount, setDonationAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto');
   const [isDonating, setIsDonating] = useState(false);
   const { isAuthenticated } = useAuth();
   const { show: showToast } = useToast();
+  const navigate = useNavigate();
   const progress = Math.min(
     (campaign.raised_amount / campaign.target_amount) * 100,
     100
@@ -33,23 +38,60 @@ export function DonationCard({ campaign }: DonationCardProps) {
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      // Handle login redirect
+    
+    if (!donationAmount) {
+      showToast({
+        title: "Error",
+        description: "Please enter a donation amount",
+        type: "error",
+      });
       return;
     }
-    if (!donationAmount) return;
+
+    const amount = parseFloat(donationAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showToast({
+        title: "Error",
+        description: "Please enter a valid donation amount",
+        type: "error",
+      });
+      return;
+    }
+
+    if (paymentMethod === 'crypto' && !isAuthenticated) {
+      navigate('/auth', { state: { from: window.location.pathname } });
+      return;
+    }
 
     setIsDonating(true);
+
     try {
-      // Handle donation logic
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      showToast({
-        title: "Thank you!",
-        description: `Your donation of $${donationAmount} has been received.`,
-        type: "success",
-      });
+      if (paymentMethod === 'crypto') {
+        // Handle crypto donation
+        // This would be replaced with actual smart contract interaction
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        showToast({
+          title: "Transaction Submitted!",
+          description: "Your donation is being processed on the blockchain.",
+          type: "success",
+        });
+      } else {
+        // Handle fiat payment
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        showToast({
+          title: "Thank you!",
+          description: `Your ${paymentMethod} donation of $${donationAmount} has been received.`,
+          type: "success",
+        });
+      }
+      
       setDonationAmount("");
+      window.location.reload(); // Refresh to show updated donation amount
+      
     } catch (error) {
+      console.error("Donation error:", error);
       showToast({
         title: "Error",
         description: "Failed to process donation. Please try again.",
@@ -85,22 +127,89 @@ export function DonationCard({ campaign }: DonationCardProps) {
         </div>
       </div>
 
-      <form onSubmit={handleDonate} className="space-y-3">
+      <form onSubmit={handleDonate} className="space-y-4">
+        {/* Payment Method Selection */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Payment Method
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('crypto')}
+              className={`flex items-center justify-center p-3 border rounded-md ${
+                paymentMethod === 'crypto' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <Wallet className="w-5 h-5 mr-2" />
+              <span>Crypto</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('card')}
+              className={`flex items-center justify-center p-3 border rounded-md ${
+                paymentMethod === 'card' 
+                  ? 'border-indigo-500 bg-indigo-50' 
+                  : 'border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <CreditCard className="w-5 h-5 mr-2" />
+              <span>Card</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Donation Amount */}
         <div>
-          <input
-            type="number"
-            value={donationAmount}
-            onChange={(e) => setDonationAmount(e.target.value)}
-            className="w-full p-2 border rounded-md"
-            placeholder="Enter amount ($)"
-            min="1"
-            step="1"
-            disabled={isDonating}
-          />
+          <label htmlFor="donation-amount" className="block text-sm font-medium text-gray-700 mb-1">
+            Donation Amount
+          </label>
+          <div className="relative rounded-md shadow-sm">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">$</span>
+            </div>
+            <input
+              type="number"
+              id="donation-amount"
+              value={donationAmount}
+              onChange={(e) => setDonationAmount(e.target.value)}
+              className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md p-2 border"
+              placeholder="0.00"
+              min="1"
+              step="0.01"
+              disabled={isDonating}
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <span className="text-gray-500 sm:text-sm">
+                USD
+              </span>
+            </div>
+          </div>
+          {paymentMethod === 'crypto' && (
+            <p className="mt-1 text-xs text-gray-500">
+              You'll be asked to confirm the transaction in your wallet
+            </p>
+          )}
+        </div>
+
+        {/* Quick Donation Buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          {[10, 25, 50].map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => setDonationAmount(amount.toString())}
+              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-3 rounded-md transition-colors"
+            >
+              ${amount}
+            </button>
+          ))}
         </div>
         <Button
           type="submit"
-          className="w-full bg-indigo-600 hover:bg-indigo-700"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 mt-2"
           disabled={isDonating || !donationAmount}
         >
           {isDonating ? (
@@ -125,12 +234,14 @@ export function DonationCard({ campaign }: DonationCardProps) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Processing...
+              {paymentMethod === 'crypto' ? 'Confirm in Wallet' : 'Processing...'}
             </span>
           ) : (
             <span className="flex items-center justify-center">
               <Heart className="w-4 h-4 mr-2" />
-              {isAuthenticated ? "Donate Now" : "Sign In to Donate"}
+              {paymentMethod === 'crypto' && !isAuthenticated 
+                ? 'Connect Wallet to Donate'
+                : 'Donate Now'}
             </span>
           )}
         </Button>
