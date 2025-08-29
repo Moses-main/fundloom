@@ -8,6 +8,7 @@ import { useToast } from "./ui/ToastProvider";
 import { useNavigate } from "react-router-dom";
 import { useContract, useAccount } from "@starknet-react/core";
 import { FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI } from "../config/contracts";
+import React from 'react';
 
 type PaymentMethod = 'crypto' | 'card' | 'bank';
 
@@ -25,7 +26,7 @@ interface DonationCardProps {
 // Helper function to convert ETH to Wei (1 ETH = 1e18 Wei)
 const toWei = (eth: string): string => {
   try {
-    return number.toFelt(Number(eth) * 1e18);
+    return (Number(eth) * 1e18).toString();
   } catch (error) {
     console.error('Error converting to wei:', error);
     return '0';
@@ -47,7 +48,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
   
   // Initialize the contract
   const { contract } = useContract({
-    abi: FUNDLOOM_ABI,
+    abi: FUNDLOOM_ABI as any, // Type assertion for now
     address: FUNDLOOM_CONTRACT_ADDRESS,
   });
   
@@ -67,6 +68,16 @@ export function DonationCard({ campaign }: DonationCardProps) {
       return () => clearTimeout(timer);
     }
   }, [transactionHash, donationAmount, showToast]);
+  
+  const progress = Math.min(
+    (campaign.raised_amount / campaign.target_amount) * 100,
+    100
+  );
+  
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((campaign.deadline * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
+  );
   const progress = Math.min(
     (campaign.raised_amount / campaign.target_amount) * 100,
     100
@@ -100,20 +111,23 @@ export function DonationCard({ campaign }: DonationCardProps) {
     
     try {
       if (paymentMethod === 'crypto') {
-        try {
-          // Convert ETH amount to Wei (1 ETH = 1e18 Wei)
-          const amountInWei = (Number(donationAmount) * 1e18).toString();
-          
-          // Execute the contract call
-          const tx = await contract?.donate(
-            campaign.id.toString(),
-            { value: amountInWei }
-          );
-          
-          // Store the transaction hash to show to the user
-          if (tx?.transaction_hash) {
-            setTransactionHash(tx.transaction_hash);
-          }
+        if (!contract) {
+          throw new Error("Contract not initialized");
+        }
+        
+        // Convert ETH amount to Wei (1 ETH = 1e18 Wei)
+        const amountInWei = toWei(donationAmount);
+        
+        // Execute the contract call
+        const tx = await contract.donate(
+          campaign.id.toString(),
+          { value: amountInWei }
+        );
+        
+        // Store the transaction hash to show to the user
+        if (tx?.transaction_hash) {
+          setTransactionHash(tx.transaction_hash);
+        }
         
         showToast({
           title: "Transaction Submitted!",
@@ -132,24 +146,25 @@ export function DonationCard({ campaign }: DonationCardProps) {
       
       // Reset the form
       setDonationAmount("");
+    } catch (error) {
+      console.error("Donation error:", error);
       
-      // In a real app, you might want to update the UI without a full page reload
-      // For now, we'll just show the transaction status
-      } catch (error) {
-        console.error("Donation error:", error);
-        
-        let errorMessage = "There was an error processing your donation. Please try again.";
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-        
-        showToast({
-          title: "Donation Failed",
-          description: errorMessage
-        });
+      let errorMessage = "There was an error processing your donation. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      showToast({
+        title: "Donation Failed",
+        description: errorMessage
+      });
     } finally {
       setIsDonating(false);
     }
+  };
+  
+  // Return the JSX
+  return (
   };
 
   return (

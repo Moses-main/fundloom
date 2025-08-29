@@ -116,7 +116,7 @@ export function HowItWorksSection() {
         </div>
 
         <div className="mt-16 text-center">
-          <Button size="lg" className="text-lg px-8 py-6">
+          <Button size="lg" className="text-lg px-8 py-6 cursor-pointer">
             Start Your First Campaign
           </Button>
         </div>
