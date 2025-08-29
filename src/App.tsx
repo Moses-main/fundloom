@@ -28,6 +28,7 @@ const CampaignReportPage = lazy(() => import("./pages/CampaignReportPage"));
 const CampaignDiscussionPage = lazy(
   () => import("./pages/CampaignDiscussionPage")
 );
+const SharedCampaignPage = lazy(() => import("./pages/SharedCampaignPage"));
 import { LoadingProvider } from "./context/LoadingContext";
 import LoadingOverlay from "./components/ui/LoadingOverlay";
 
@@ -97,6 +98,10 @@ function App() {
                       <Route
                         path="/campaigns/:id/discussion"
                         element={<CampaignDiscussionPage />}
+                      />
+                      <Route
+                        path="/campaign/:campaignId"
+                        element={<SharedCampaignPage />}
                       />
                       <Route
                         path="/profile"
