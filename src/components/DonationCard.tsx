@@ -1,14 +1,14 @@
 // src/components/DonationCard.tsx
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/Progress";
 import { Heart, Share2, CreditCard, Wallet, ExternalLink } from "lucide-react";
-import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "./ui/ToastProvider";
 import { useNavigate } from "react-router-dom";
 import { useContract, useAccount } from "@starknet-react/core";
 import { FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI } from "../config/contracts";
-import React from 'react';
+import { num, Call, InvokeFunctionResponse } from 'starknet';
 
 type PaymentMethod = 'crypto' | 'card' | 'bank';
 
@@ -26,9 +26,10 @@ interface DonationCardProps {
 // Helper function to convert ETH to Wei (1 ETH = 1e18 Wei)
 const toWei = (eth: string): string => {
   try {
-    return (Number(eth) * 1e18).toString();
+    const wei = BigInt(Math.floor(parseFloat(eth) * 1e18));
+    return num.toFelt(wei);
   } catch (error) {
-    console.error('Error converting to wei:', error);
+    console.error('Error converting ETH to Wei:', error);
     return '0';
   }
 };
@@ -46,11 +47,24 @@ export function DonationCard({ campaign }: DonationCardProps) {
   // Get the connected account
   const { account } = useAccount();
   
-  // Initialize the contract
+  // Initialize the contract with proper typing
   const { contract } = useContract({
-    abi: FUNDLOOM_ABI as any, // Type assertion for now
+    abi: FUNDLOOM_ABI,
     address: FUNDLOOM_CONTRACT_ADDRESS,
   });
+  
+  // Helper to check if account is a valid StarkNet account
+  const isStarknetAccount = (account: any): account is {
+    execute: (calls: Call | Call[]) => Promise<InvokeFunctionResponse>;
+  } => {
+    return account && typeof account.execute === 'function';
+  };
+  
+  // Helper to convert ETH to Wei
+  const toWei = (eth: string): string => {
+    const wei = BigInt(Math.floor(Number(eth) * 1e18));
+    return num.toFelt(wei);
+  };
   
   // Effect to handle transaction status
   useEffect(() => {
@@ -69,19 +83,12 @@ export function DonationCard({ campaign }: DonationCardProps) {
     }
   }, [transactionHash, donationAmount, showToast]);
   
+  // Calculate campaign progress and days left
   const progress = Math.min(
     (campaign.raised_amount / campaign.target_amount) * 100,
     100
   );
   
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((campaign.deadline * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
-  );
-  const progress = Math.min(
-    (campaign.raised_amount / campaign.target_amount) * 100,
-    100
-  );
   const daysLeft = Math.max(
     0,
     Math.ceil((campaign.deadline * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
@@ -118,14 +125,32 @@ export function DonationCard({ campaign }: DonationCardProps) {
         // Convert ETH amount to Wei (1 ETH = 1e18 Wei)
         const amountInWei = toWei(donationAmount);
         
-        // Execute the contract call
-        const tx = await contract.donate(
-          campaign.id.toString(),
-          { value: amountInWei }
-        );
+        if (!account) {
+          throw new Error("No account connected");
+        }
+        
+        if (!isStarknetAccount(account)) {
+          throw new Error("Invalid StarkNet account");
+        }
+        
+        // Create the contract call with proper typing and include value in calldata
+        const call: Call = {
+          contractAddress: FUNDLOOM_CONTRACT_ADDRESS,
+          entrypoint: 'donate',
+          calldata: [
+            campaign.id.toString(),
+            amountInWei  // Include the value as part of the calldata
+          ]
+        };
+        
+        // Execute the transaction
+        const tx = await account.execute(call);
+        
+        // Wait for transaction to be processed
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Store the transaction hash to show to the user
-        if (tx?.transaction_hash) {
+        if (tx.transaction_hash) {
           setTransactionHash(tx.transaction_hash);
         }
         
@@ -163,10 +188,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
     }
   };
   
-  // Return the JSX
-  return (
-  };
-
+  // Return the JSX for the donation card
   return (
     <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
       <div className="flex justify-between items-center">
