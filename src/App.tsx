@@ -20,6 +20,7 @@ const CampaignsPage = lazy(() => import("./pages/CampaignsPage"));
 import StarknetProvider from "./utils/starknetProvider";
 const FeaturePage = lazy(() => import("./pages/Feature"));
 import { ToastProvider } from "./components/ui/ToastProvider";
+
 const DocsApi = lazy(() => import("./pages/DocsApi"));
 const DocsProtocol = lazy(() => import("./pages/DocsProtocol"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -83,6 +84,7 @@ function App() {
                       />
                       <Route path="/feature" element={<FeaturePage />} />
                       <Route path="/admin" element={<AdminPage />} />
+                      <Route path="/campaign/:id" element={<SharedCampaignPage />} />
                       <Route
                         path="/campaigns/:id/donors"
                         element={
