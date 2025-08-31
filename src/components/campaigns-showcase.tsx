@@ -44,6 +44,40 @@ const campaigns = [
     category: "Arts & Culture",
     image: "/students-coding.png",
   },
+
+  {
+    title: "Emergency Relief for Flood Victims",
+    description:
+      "Delivering food, shelter, and medical aid to families displaced by devastating floods in affected regions.",
+    raised: 27000,
+    goal: 60000,
+    supporters: 1450,
+    daysLeft: 12,
+    category: "Disaster Relief",
+    image: "/flood_relief.jpg",
+  },
+  {
+    title: "Tech for Girls Initiative",
+    description:
+      "Empowering young girls in underserved communities with laptops, internet access, and coding training to bridge the digital divide.",
+    raised: 18000,
+    goal: 40000,
+    supporters: 654,
+    daysLeft: 45,
+    category: "Education & Equality",
+    image: "/tech_for_girls.jpg",
+  },
+  {
+    title: "Reforest Our Future",
+    description:
+      "Planting 100,000 trees to restore deforested lands, combat climate change, and support biodiversity conservation.",
+    raised: 22000,
+    goal: 70000,
+    supporters: 1103,
+    daysLeft: 27,
+    category: "Environment",
+    image: "/reforestation_project.jpeg",
+  },
 ];
 
 export function CampaignsShowcase() {

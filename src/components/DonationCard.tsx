@@ -27,7 +27,7 @@ interface DonationCardProps {
 const toWei = (eth: string): string => {
   try {
     const wei = BigInt(Math.floor(parseFloat(eth) * 1e18));
-    return num.toFelt(wei);
+    return wei.toString();
   } catch (error) {
     console.error('Error converting ETH to Wei:', error);
     return '0';
@@ -63,7 +63,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
   // Helper to convert ETH to Wei
   const toWei = (eth: string): string => {
     const wei = BigInt(Math.floor(Number(eth) * 1e18));
-    return num.toFelt(wei);
+    return wei.toString();
   };
   
   // Effect to handle transaction status

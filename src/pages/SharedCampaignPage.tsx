@@ -1,304 +1,87 @@
-// import { useEffect, useState } from 'react';
-// import { useParams, useNavigate } from 'react-router-dom';
-// import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-// import { Button } from '../components/ui/Button';
-// import { Progress } from '../components/ui/Progress';
-// import { formatDistanceToNow } from 'date-fns';
-// import { useToast } from '../components/ui/ToastProvider';
-// import { Loader2 } from 'lucide-react';
-// import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Loader2, ArrowLeft, Share2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-// interface Campaign {
-//   id: string;
-//   title: string;
-//   description: string;
-//   targetAmount: number;
-//   currentAmount: number;
-//   deadline: string;
-//   imageUrl: string;
-//   creator: {
-//     name: string;
-//     avatar: string;
-//   };
-// }
+// Import the SharedCampaign component
+import SharedCampaign from '../components/SharedCampaign';
 
-// export default function SharedCampaignPage() {
-//   const { campaignId } = useParams<{ campaignId: string }>();
-//   const [campaign, setCampaign] = useState<Campaign | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-//   const { toast } = useToast();
-//   const navigate = useNavigate();
-//   const { isAuthenticated } = useAuth();
-//   const { show: showToast } = useToast();
+// Mock data for development
+const MOCK_CAMPAIGN = {
+  id: '1',
+  title: 'Sample Campaign',
+  description: 'This is a sample campaign description that explains the purpose and goals of this fundraising campaign.',
+  target_amount: 5000,
+  raised_amount: 1250,
+  deadline: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days from now
+  created_at: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+  is_active: true,
+  charity_address: '0x1234567890abcdef1234567890abcdef12345678',
+  image: '/sample-campaign.jpg',
+  charity: {
+    name: 'Sample Charity Foundation',
+    description: 'Dedicated to making a difference in the community through various initiatives.',
+    logo: '/charity-logo.png'
+  },
+  updates: [
+    {
+      id: '1',
+      title: 'Campaign Successfully Launched!',
+      content: 'We are excited to announce the launch of our new fundraising campaign!',
+      date: new Date(),
+      author: 'Admin'
+    },
+    {
+      id: '2',
+      title: 'First Milestone Reached',
+      content: 'Thanks to your generous support, we\'ve reached 25% of our funding goal!',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      author: 'Admin'
+    }
+  ]
+};
 
-//   useEffect(() => {
-//     const fetchCampaign = async () => {
-//       try {
-//         const response = await fetch(`/api/campaigns/${campaignId}`);
-//         if (!response.ok) {
-//           throw new Error('Campaign not found');
-//         }
-//         const data = await response.json();
-//         setCampaign(data);
-//       } catch (err) {
-//         setError('Failed to load campaign');
-//         showToast({
-//           title: 'Error',
-//           description: 'Could not load the campaign. It may have been removed or the link is invalid.',
-//           type: 'error',
-//         });
-//       } finally {
-//         setIsLoading(false);
-//       }
-//     };
-
-//     if (campaignId) {
-//       fetchCampaign();
-//     }
-//   }, [campaignId, toast]);
-
-//   const handleDonateClick = () => {
-//     if (!isAuthenticated) {
-//       navigate('/login', { state: { from: `/campaign/${campaignId}` } });
-//       return;
-//     }
-//     navigate(`/campaign/${campaignId}/donate`);
-//   };
-
-//   if (isLoading) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen">
-//         <Loader2 className="h-8 w-8 animate-spin" />
-//       </div>
-//     );
-//   }
-
-//   if (error || !campaign) {
-//     return (
-//       <div className="container mx-auto px-4 py-8 text-center">
-//         <h1 className="text-2xl font-bold mb-4">Campaign Not Found</h1>
-//         <p className="mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
-//         <Button onClick={() => navigate('/')}>Back to Home</Button>
-//       </div>
-//     );
-//   }
-
-//   const progress = Math.min((campaign.currentAmount / campaign.targetAmount) * 100, 100);
-//   const daysLeft = formatDistanceToNow(new Date(campaign.deadline), { addSuffix: true });
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-//       {/* Hero Section */}
-//       <div className="bg-indigo-700 text-white py-16">
-//         <div className="container mx-auto px-4 text-center">
-//           <h1 className="text-4xl font-bold mb-4">Support a Meaningful Cause</h1>
-//           <p className="text-xl mb-8 max-w-2xl mx-auto">
-//             Join us in making a difference. Your contribution helps create positive change.
-//           </p>
-//         </div>
-//       </div>
-
-//       {/* Campaign Card */}
-//       <div className="container mx-auto px-4 py-12 -mt-12">
-//         <Card className="max-w-3xl mx-auto shadow-lg overflow-hidden">
-//           {campaign.imageUrl && (
-//             <div className="h-64 bg-gray-200 overflow-hidden">
-//               <img
-//                 src={campaign.imageUrl}
-//                 alt={campaign.title}
-//                 className="w-full h-full object-cover"
-//               />
-//             </div>
-//           )}
-//           <CardHeader>
-//             <div className="flex justify-between items-start">
-//               <div>
-//                 <CardTitle className="text-2xl">{campaign.title}</CardTitle>
-//                 <p className="text-sm text-gray-500 mt-1">
-//                   Created by {campaign.creator.name}
-//                 </p>
-//               </div>
-//               <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">
-//                 {daysLeft}
-//               </span>
-//             </div>
-//           </CardHeader>
-//           <CardContent>
-//             <p className="text-gray-700 mb-6">{campaign.description}</p>
-
-//             <div className="space-y-4">
-//               <div>
-//                 <div className="flex justify-between text-sm mb-1">
-//                   <span>Raised: ${campaign.currentAmount.toLocaleString()}</span>
-//                   <span>Goal: ${campaign.targetAmount.toLocaleString()}</span>
-//                 </div>
-//                 <Progress value={progress} className="h-2" />
-//                 <p className="text-right text-sm text-gray-500 mt-1">
-//                   {progress.toFixed(1)}% funded
-//                 </p>
-//               </div>
-
-//               <div className="pt-4">
-//                 <Button
-//                   onClick={handleDonateClick}
-//                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-6 text-lg"
-//                 >
-//                   Donate Now
-//                 </Button>
-
-//                 {!isAuthenticated && (
-//                   <p className="text-center text-sm text-gray-500 mt-2">
-//                     You'll need to sign in to make a donation
-//                   </p>
-//                 )}
-//               </div>
-//             </div>
-//           </CardContent>
-//         </Card>
-//       </div>
-
-//       {/* Additional Info Section */}
-//       <div className="bg-gray-50 py-12">
-//         <div className="container mx-auto px-4">
-//           <h2 className="text-2xl font-bold text-center mb-8">How Your Donation Helps</h2>
-//           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-//             <div className="text-center p-6 bg-white rounded-lg shadow">
-//               <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-//                 <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-//                 </svg>
-//               </div>
-//               <h3 className="font-semibold mb-2">Direct Impact</h3>
-//               <p className="text-gray-600 text-sm">Your donation goes directly to support this cause and make a real difference.</p>
-//             </div>
-
-//             <div className="text-center p-6 bg-white rounded-lg shadow">
-//               <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-//                 <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-//                 </svg>
-//               </div>
-//               <h3 className="font-semibold mb-2">Trust & Transparency</h3>
-//               <p className="text-gray-600 text-sm">We ensure complete transparency in how funds are used and distributed.</p>
-//             </div>
-
-//             <div className="text-center p-6 bg-white rounded-lg shadow">
-//               <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-//                 <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-//                 </svg>
-//               </div>
-//               <h3 className="font-semibold mb-2">Community Support</h3>
-//               <p className="text-gray-600 text-sm">Join a community of like-minded individuals making a positive impact.</p>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// src/pages/SharedCampaignPage.tsx
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
-import {
-  Loader2,
-  ArrowLeft,
-  Share2,
-  Globe,
-  MessageSquare,
-  Heart,
-} from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../components/ui/ToastProvider";
-import { DonationCard } from "../components/DonationCard";
-import { formatDistanceToNow } from "date-fns";
-
-interface Campaign {
-  id: string | number;
-  title: string;
-  description: string;
-  target_amount: number;
-  raised_amount: number;
-  deadline: number;
-  image?: string;
-  created_at: number;
-  category?: string;
-  is_active: boolean;
-  charity_address: string;
-  charity?: {
-    name: string;
-    description?: string;
-    logo?: string;
-  };
-}
-
-export default function SharedCampaignPage() {
+const SharedCampaignPage = () => {
   const { id: campaignId } = useParams<{ id: string }>();
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { show: showToast } = useToast();
-  const searchParams = new URLSearchParams(window.location.search);
-  const campaignIdFromQuery = searchParams.get('campaign');
-  
-  // Use campaignId from query params if available, otherwise use route param
-  const effectiveCampaignId = campaignIdFromQuery || campaignId;
+  const { isAuthenticated, user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [campaign, setCampaign] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
-        setIsLoading(true);
-        // In a real app, this would be an API call
+        // In a real app, you would fetch the campaign data from your API
         // const response = await fetch(`/api/campaigns/${campaignId}`);
-        // if (!response.ok) throw new Error('Campaign not found');
         // const data = await response.json();
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        // Mock data for demo
-        const mockCampaign: Campaign = {
-          id: effectiveCampaignId || "1",
-          title: "Help Build a School in Rural Area",
-          description:
-            "We are raising funds to build a school in a rural area to provide education to underprivileged children. Your support will help us build classrooms, provide learning materials, and hire qualified teachers.",
-          target_amount: 50000,
-          raised_amount: 27500,
-          deadline: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days from now
-          image:
-            "https://images.unsplash.com/photo-1523050853548-2d445022a5e8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-          created_at: Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60, // 7 days ago
-          category: "Education",
-          is_active: true,
-          charity_address: "0x123...abc",
-          charity: {
-            name: "Education for All Foundation",
-            description: "Providing quality education to children in need",
-            logo: "https://via.placeholder.com/100",
-          },
+        // setCampaign(data);
+        
+        // For now, use mock data and ensure it matches the expected format
+        const mockCampaign = {
+          ...MOCK_CAMPAIGN,
+          // Ensure all required fields are present
+          raised: MOCK_CAMPAIGN.raised_amount,
+          target: MOCK_CAMPAIGN.target_amount,
+          deadline: new Date(MOCK_CAMPAIGN.deadline).toISOString(),
+          backers: 0, // Default value since it's not in the mock data
+          walletAddress: MOCK_CAMPAIGN.charity_address,
+          // Ensure updates have the correct format
+          updates: MOCK_CAMPAIGN.updates.map(update => ({
+            ...update,
+            date: new Date(update.date).toISOString()
+          }))
         };
-
+        
+        console.log('Setting campaign data:', mockCampaign);
         setCampaign(mockCampaign);
+        setIsLoading(false);
       } catch (err) {
-        setError("Failed to load campaign");
-        showToast({
-          title: "Error",
-          description:
-            "Could not load the campaign. It may have been removed or the link is invalid.",
-          type: "error",
-        });
-      } finally {
+        console.error('Error fetching campaign:', err);
+        setError('Failed to load campaign. Please try again later.');
         setIsLoading(false);
       }
     };
@@ -306,197 +89,122 @@ export default function SharedCampaignPage() {
     if (campaignId) {
       fetchCampaign();
     }
-  }, [campaignId, showToast]);
+  }, [campaignId]);
+
+  const handleDonate = async (amount: number, tokenAddress: string) => {
+    try {
+      // In a real app, you would handle the donation logic here
+      console.log(`Donating ${amount} of token ${tokenAddress} to campaign ${campaignId}`);
+      
+      // Redirect to login if not authenticated
+      if (!isAuthenticated) {
+        navigate('/login', { state: { from: window.location.pathname } });
+        return;
+      }
+      
+      // Simulate donation processing (replace with actual donation logic)
+      // In a real app, this would involve interacting with your smart contract
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // After successful donation, redirect to thank you page
+      navigate('/thank-you', {
+        state: {
+          campaign: {
+            id: campaignId,
+            title: campaign?.title || 'the campaign'
+          },
+          donationAmount: amount
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error processing donation:', error);
+      // Handle error (e.g., show error toast)
+      setError('Failed to process donation. Please try again.');
+    }
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading campaign...</span>
       </div>
     );
   }
 
-  if (error || !campaign) {
+  if (error) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            Campaign Not Found
-          </h1>
-          <p className="text-gray-600 mb-6">
-            The campaign you're looking for doesn't exist or has been removed.
-          </p>
-          <Button
-            onClick={() => navigate("/")}
-            className="bg-indigo-600 hover:bg-indigo-700"
+      <div className="container mx-auto p-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
-          </Button>
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  const progress = Math.min(
-    (campaign.raised_amount / campaign.target_amount) * 100,
-    100
-  );
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((campaign.deadline * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
-  );
+  if (!campaign) {
+    return (
+      <div className="container mx-auto p-4">
+        <p>Campaign not found</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Back Button */}
-      <div className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="text-gray-600 hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back
-          </Button>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <div className="relative bg-gray-900">
-        {campaign.image ? (
-          <img
-            src={campaign.image}
-            alt={campaign.title}
-            className="w-full h-64 md:h-96 object-cover opacity-70"
-          />
-        ) : (
-          <div className="w-full h-64 md:h-96 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
-        <div className="container mx-auto px-4 relative z-10 h-full flex flex-col justify-end pb-8">
-          <div className="max-w-4xl">
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                {campaign.category || "General"}
-              </span>
-              <span className="text-white/80 text-sm">
-                {daysLeft} days left
-              </span>
+    <div className="container mx-auto p-4">
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate(-1)}
+        className="mb-4 flex items-center"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Campaigns
+      </Button>
+      
+      <SharedCampaign 
+        campaign={campaign} 
+        onDonate={handleDonate} 
+        isAuthenticated={isAuthenticated}
+      />
+      
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">About This Campaign</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700">{campaign.description}</p>
+            
+            <div className="mt-6">
+              <h3 className="font-semibold text-lg mb-2">Updates ({campaign.updates?.length || 0})</h3>
+              {campaign.updates?.length > 0 ? (
+                <div className="space-y-4">
+                  {campaign.updates.map((update: any) => (
+                    <div key={update.id} className="border-b pb-4 last:border-0">
+                      <h4 className="font-medium">{update.title}</h4>
+                      <p className="text-sm text-gray-600">
+                        Posted by {update.author} • {formatDistanceToNow(new Date(update.date), { addSuffix: true })}
+                      </p>
+                      <p className="mt-1 text-gray-800">{update.content}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No updates yet.</p>
+              )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              {campaign.title}
-            </h1>
-            {campaign.charity && (
-              <div className="flex items-center">
-                <span className="text-white/90">
-                  by {campaign.charity.name}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8 -mt-16 relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Campaign Story */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Campaign Story</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  <p>{campaign.description}</p>
-                  <p className="mt-4">
-                    Your support will help us achieve our goal of raising $
-                    {campaign.target_amount.toLocaleString()}
-                    to make a real difference. Every contribution, no matter how
-                    small, brings us closer to our target.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Campaign Updates */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Updates</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="border-l-2 border-indigo-500 pl-4 py-1">
-                    <div className="text-sm text-indigo-600 font-medium">
-                      Campaign Launched
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(
-                        campaign.created_at * 1000
-                      ).toLocaleDateString()}
-                    </div>
-                    <p className="mt-1 text-sm text-gray-700">
-                      We've just launched this campaign and we're excited to
-                      share our vision with you!
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar with Donation Card */}
-          <div className="space-y-6">
-            <DonationCard campaign={campaign} />
-
-            {/* About Charity */}
-            {campaign.charity && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>About the Charity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                      {campaign.charity.logo ? (
-                        <img
-                          src={campaign.charity.logo}
-                          alt={campaign.charity.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Globe className="w-6 h-6 text-gray-400" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{campaign.charity.name}</h4>
-                      {campaign.charity.description && (
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                          {campaign.charity.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Share Buttons */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Share This Campaign</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Share2 className="w-4 h-4 mr-2" /> Share
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-}
+};
+
+export default SharedCampaignPage;

@@ -30,6 +30,7 @@ const CampaignDiscussionPage = lazy(
   () => import("./pages/CampaignDiscussionPage")
 );
 const SharedCampaignPage = lazy(() => import("./pages/SharedCampaignPage"));
+const ThankYouPage = lazy(() => import("./pages/ThankYouPage"));
 import { LoadingProvider } from "./context/LoadingContext";
 import LoadingOverlay from "./components/ui/LoadingOverlay";
 
@@ -48,8 +49,14 @@ function App() {
                   <Header />
                   <Suspense fallback={<LoadingOverlay />}>
                     <Routes>
+                      <Route path="/admin" element={<AdminPage />} />
                       <Route path="/" element={<HomePage />} />
                       <Route path="/auth" element={<AuthPage />} />
+
+                      <Route
+                        path="/shared-campaign/:id"
+                        element={<SharedCampaignPage />}
+                      />
                       <Route
                         path="/auth/callback"
                         element={<OAuthCallbackPage />}
@@ -83,8 +90,15 @@ function App() {
                         }
                       />
                       <Route path="/feature" element={<FeaturePage />} />
-                      <Route path="/admin" element={<AdminPage />} />
-                      <Route path="/campaign/:id" element={<SharedCampaignPage />} />
+                      <Route
+                        path="/campaigns/shared/:id"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route
+                        path="/campaigns/:id"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route path="/thank-you" element={<ThankYouPage />} />
                       <Route
                         path="/campaigns/:id/donors"
                         element={
