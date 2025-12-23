@@ -1,13 +1,9 @@
 // src/lib/evm.ts
-// Lightweight EVM helpers built on ethers for MetaMask connection, signing, and contract calls
+// Lightweight EVM helpers built on ethers v5 for MetaMask connection, signing, and contract calls
 
-import {
-  BrowserProvider,
-  Contract,
-  formatEther,
-  getAddress,
-  parseEther,
-} from "ethers";
+import { providers, Contract, utils } from "ethers";
+const { formatEther, parseEther, getAddress } = utils;
+const { Web3Provider } = providers;
 import ABI from "../abi/ABI.json" assert { type: "json" };
 
 // Minimal ERC20 ABI fragments
@@ -29,10 +25,10 @@ export function getEthereum(): any | null {
   return (window as any).ethereum || null;
 }
 
-export async function ensureProvider(): Promise<BrowserProvider> {
+export async function ensureProvider() {
   const eth = getEthereum();
   if (!eth) throw new Error("MetaMask not detected. Please install MetaMask.");
-  return new BrowserProvider(eth);
+  return new Web3Provider(eth);
 }
 
 export async function connectWallet(): Promise<EvmConnectResult> {

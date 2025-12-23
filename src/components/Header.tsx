@@ -100,32 +100,7 @@ export const Header: React.FC = () => {
               })}
             </div>
           ) : (
-            <>
-              <Link
-                to="/"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Home
-              </Link>
-              <Link
-                to="/docs/api"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                API Docs
-              </Link>
-              <Link
-                to="/docs/protocol"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Protocol
-              </Link>
-              <Link
-                to="/feature"
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Feature Page
-              </Link>
-            </>
+            <></>
           )}
         </nav>
 

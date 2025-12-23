@@ -14,6 +14,13 @@ export type AuthUser = {
   wallets?: Array<{ provider?: string; chainType?: string; address: string }>;
 };
 
+export type LoginWithWalletParams = {
+  address: string;
+  signature: string;
+  message: string;
+  walletType: string;
+};
+
 export type AuthContextType = {
   // derived states
   isAuthenticated: boolean;
@@ -24,6 +31,7 @@ export type AuthContextType = {
   token: string | null;
   // actions
   logout: () => Promise<void>;
+  loginWithWallet: (params: LoginWithWalletParams) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -178,6 +186,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Handle wallet login
+  const loginWithWallet = async ({ address, signature, message, walletType }: LoginWithWalletParams) => {
+    try {
+      // Call your backend API to authenticate with the wallet
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'}/auth/wallet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address,
+          signature,
+          message,
+          walletType,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to authenticate with wallet');
+      }
+
+      const data = await response.json();
+      
+      // Store the JWT token and user data
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        setToken(data.token);
+      }
+      
+      if (data.user) {
+        const normalizedUser = { ...data.user, id: data.user.id || data.user._id };
+        localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
+        setUser(normalizedUser);
+      }
+
+      // Update wallet address in state
+      setEvmAddress(address);
+      
+      // Notify other tabs
+      window.dispatchEvent(new Event('auth_changed'));
+      
+    } catch (error: any) {
+      console.error('Wallet login error:', error);
+      throw error; // Re-throw to be handled by the component
+    }
+  };
+
   const value: AuthContextType = {
     isAuthenticated,
     hasJwt,
@@ -186,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     token,
     logout,
+    loginWithWallet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { HeroSection } from "../components/hero-section";
 import { FeaturesSection } from "../components/features-section";
 import { HowItWorksSection } from "../components/how-it-works-section";
 import { CampaignsShowcase } from "../components/campaigns-showcase";
+import Testimonials from "@/components/Testimonials";
 import { Footer } from "../components/footer";
 import { ProtocolSections } from "../components/protocol-sections";
 
@@ -13,7 +14,7 @@ export default function HomePage() {
 
   useEffect(() => {
     // Check if there's a campaign ID in the query parameters
-    const campaignId = searchParams.get('campaign');
+    const campaignId = searchParams.get("campaign");
     if (campaignId) {
       // Redirect to the campaign page with the ID from the query parameter
       navigate(`/campaign/${campaignId}`, { replace: true });
@@ -21,11 +22,11 @@ export default function HomePage() {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-ah-screen">
       <main>
         <HeroSection />
         <FeaturesSection />
-        <ProtocolSections />
+        <Testimonials />
         <HowItWorksSection />
         <CampaignsShowcase />
       </main>

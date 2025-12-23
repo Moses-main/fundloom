@@ -18,11 +18,7 @@ const ForgotWalletPage = lazy(() => import("./pages/ForgotWallet"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const CampaignsPage = lazy(() => import("./pages/CampaignsPage"));
 import StarknetProvider from "./utils/starknetProvider";
-const FeaturePage = lazy(() => import("./pages/Feature"));
 import { ToastProvider } from "./components/ui/ToastProvider";
-
-const DocsApi = lazy(() => import("./pages/DocsApi"));
-const DocsProtocol = lazy(() => import("./pages/DocsProtocol"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const CampaignDonorsPage = lazy(() => import("./pages/CampaignDonorsPage"));
 const CampaignReportPage = lazy(() => import("./pages/CampaignReportPage"));
@@ -61,8 +57,6 @@ function App() {
                         path="/auth/callback"
                         element={<OAuthCallbackPage />}
                       />
-                      <Route path="/docs/api" element={<DocsApi />} />
-                      <Route path="/docs/protocol" element={<DocsProtocol />} />
                       <Route path="/campaigns" element={<CampaignsPage />} />
                       {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
                       <Route
@@ -89,7 +83,6 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                      <Route path="/feature" element={<FeaturePage />} />
                       <Route
                         path="/campaigns/shared/:id"
                         element={<SharedCampaignPage />}

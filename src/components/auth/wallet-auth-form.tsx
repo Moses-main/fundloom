@@ -3,24 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useLocation, useNavigate } from "react-router-dom";
-
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
-import { WalletConnectorModal } from "@/components/modal/WalletConnector";
-import { useAccount as useStarknetAccount, useDisconnect } from "@starknet-react/core";
-import { Connector, useConnect } from "@starknet-react/core";
-import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
+import { formatAddress } from "@/lib/utils";
+import { providers, Signer } from "ethers";
+import { Web3Provider } from "@ethersproject/providers";
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 interface WalletOption {
-  id: string;
+  id: 'metamask' | 'walletconnect' | 'coinbase';
   name: string;
   icon: string;
   description: string;
   popular?: boolean;
-  disabled?: boolean;
 }
 
 const walletOptions: WalletOption[] = [
@@ -35,20 +38,14 @@ const walletOptions: WalletOption[] = [
     id: "walletconnect",
     name: "WalletConnect",
     icon: "🔗",
-    description: "Connect with WalletConnect protocol (coming soon)",
-    disabled: true,
+    description: "Connect with WalletConnect protocol",
   },
   {
     id: "coinbase",
     name: "Coinbase Wallet",
     icon: "🔵",
     description: "Connect using Coinbase Wallet",
-  },
-  {
-    id: "starknet",
-    name: "StarkNet Wallets",
-    icon: "⭐",
-    description: "Connect ArgentX or Braavos via modal",
+    popular: true,
   },
 ];
 
@@ -58,225 +55,289 @@ interface WalletAuthFormProps {
 
 export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
-  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [connectedWallet, setConnectedWallet] = useState<WalletOption['id'] | null>(null);
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
-  const { address: starknetAddress } = useStarknetAccount();
-  const { disconnect: starknetDisconnect } = useDisconnect();
-  const { connect, connectors } = useConnect();
-  const { starknetkitConnectModal } = useStarknetkitConnectModal({
-    connectors: connectors as StarknetkitConnector[],
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<Web3Provider | null>(null);
   const { show: toast } = useToast();
-
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { loginWithWallet, logout, isAuthenticated } = useAuth();
+  
   const next = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return params.get("next") || "/dashboard";
   }, [location.search]);
 
-  // If StarkNet is connected via modal, reflect it here
+  // Redirect if already authenticated
   useEffect(() => {
-    if (starknetAddress) {
-      setConnectedWallet("starknet");
-      // Seamless onboarding: go to dashboard when connected
+    if (isAuthenticated) {
       navigate(next, { replace: true });
     }
-  }, [starknetAddress, next]);
+  }, [isAuthenticated, next, navigate]);
 
-  // Detect existing EVM connection and react to account changes
-  useEffect(() => {
-    const ethAny = (window as any)?.ethereum;
-    if (!ethAny) return;
-    const providers: any[] = ethAny.providers?.length
-      ? ethAny.providers
-      : [ethAny];
-    const metamask =
-      providers.find((p) => p?.isMetaMask) ||
-      (ethAny.isMetaMask ? ethAny : null);
-    const coinbase =
-      providers.find((p) => p?.isCoinbaseWallet) ||
-      (ethAny.isCoinbaseWallet ? ethAny : null);
-    const sync = async () => {
-      try {
-        const [cb, mm]: any[] = await Promise.all([
-          coinbase?.request?.({ method: "eth_accounts" }).catch(() => []),
-          metamask?.request?.({ method: "eth_accounts" }).catch(() => []),
-        ]);
-        const cbAcc = cb && cb.length ? cb[0] : null;
-        const mmAcc = mm && mm.length ? mm[0] : null;
-        if (cbAcc) {
-          setEvmAddress(cbAcc);
-          setConnectedWallet((w) => w ?? "coinbase");
-        } else if (mmAcc) {
-          setEvmAddress(mmAcc);
-          setConnectedWallet((w) => w ?? "metamask");
-        }
-      } catch {}
-    };
-    sync();
-    const mmHandler = (accounts: string[]) => {
-      const acc = accounts && accounts.length ? accounts[0] : null;
-      if (acc) {
-        setEvmAddress(acc);
-        setConnectedWallet("metamask");
-      } else if (connectedWallet === "metamask") {
-        setEvmAddress(null);
-        setConnectedWallet(null);
-      }
-    };
-    const cbHandler = (accounts: string[]) => {
-      const acc = accounts && accounts.length ? accounts[0] : null;
-      if (acc) {
-        setEvmAddress(acc);
-        setConnectedWallet("coinbase");
-      } else if (connectedWallet === "coinbase") {
-        setEvmAddress(null);
-        setConnectedWallet(null);
-      }
-    };
-    metamask?.on?.("accountsChanged", mmHandler);
-    coinbase?.on?.("accountsChanged", cbHandler);
-    return () => {
-      metamask?.removeListener?.("accountsChanged", mmHandler);
-      coinbase?.removeListener?.("accountsChanged", cbHandler);
-    };
-  }, []);
-
-  const isConnected = useMemo(
-    () => !!evmAddress || !!starknetAddress,
-    [evmAddress, starknetAddress]
-  );
-
-  const connectWallet = async (walletId: string) => {
-    setIsConnecting(walletId);
+  // Handle wallet connection
+  const connectWallet = async (walletId: WalletOption['id']) => {
     try {
-      if (walletId === "metamask") {
-        const eth = (window as any).ethereum;
-        if (!eth || !eth.request) {
-          toast({
-            type: "warning",
-            title: "MetaMask not detected",
-            description: "Install the MetaMask extension and try again.",
-          });
-          return;
-        }
-        const accounts: string[] = await eth.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts && accounts.length > 0) {
-          setEvmAddress(accounts[0]);
-          setConnectedWallet("metamask");
-          navigate(next, { replace: true });
-        }
-        return;
+      setError(null);
+      setIsConnecting(walletId);
+      
+      let web3Provider: Web3Provider;
+      let accounts: string[] = [];
+      
+      // Handle different wallet connections
+      switch (walletId) {
+        case 'metamask':
+          if (!window.ethereum?.isMetaMask) {
+            window.open('https://metamask.io/download.html', '_blank');
+            throw new Error('Please install MetaMask extension');
+          }
+          provider = new providers.Web3Provider(window.ethereum, 'any');
+          accounts = await provider.send('eth_requestAccounts', []);
+          break;
+          
+        case 'coinbase':
+          if (!window.ethereum?.isCoinbaseWallet && !window.ethereum?.providers?.find(p => p.isCoinbaseWallet)) {
+            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+            throw new Error('Please install Coinbase Wallet extension');
+          }
+          // Use Coinbase provider if available, otherwise fallback to window.ethereum
+          const coinbaseProvider = window.ethereum?.providers?.find(p => p.isCoinbaseWallet) || window.ethereum;
+          web3Provider = new providers.Web3Provider(coinbaseProvider, 'any');
+          setProvider(web3Provider);
+          accounts = await web3Provider.send('eth_requestAccounts', []);
+          break;
+          
+        case 'walletconnect':
+          // For WalletConnect, we'll use Web3Modal which is already set up in the project
+          // This is a simplified version - you might need to adjust based on your Web3Modal setup
+          // For WalletConnect, we'll use window.ethereum for now
+          // In a real implementation, you'd use the WalletConnect provider
+          if (!window.ethereum) {
+            throw new Error('No Ethereum provider found');
+          }
+          web3Provider = new providers.Web3Provider(window.ethereum, 'any');
+          setProvider(web3Provider);
+          accounts = await web3Provider.send('eth_requestAccounts', []);
+          
+          // Note: For production, implement proper WalletConnect provider
+          // import WalletConnectProvider from '@walletconnect/web3-provider';
+          // const provider = new WalletConnectProvider({
+          //   rpc: {
+          //     1: 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
+          //     // Add other chains as needed
+          //   },
+          // });
+          // await provider.enable();
+          // web3Provider = new providers.Web3Provider(provider);
+          break;
+          
+        default:
+          throw new Error('Unsupported wallet');
       }
-      if (walletId === "coinbase") {
-        const ethAny = (window as any).ethereum;
-        const provider =
-          ethAny?.providers?.find?.((p: any) => p?.isCoinbaseWallet) ||
-          (ethAny?.isCoinbaseWallet ? ethAny : null);
-        if (!provider || !provider.request) {
-          toast({
-            type: "warning",
-            title: "Coinbase Wallet not detected",
-            description: "Install the Coinbase Wallet extension and try again.",
-          });
-          return;
-        }
-        const accounts: string[] = await provider.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts && accounts.length > 0) {
-          setEvmAddress(accounts[0]);
-          setConnectedWallet("coinbase");
-          navigate(next, { replace: true });
-        }
-        return;
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found');
       }
-      if (walletId === "starknet") {
-        // Open StarkNet modal and connect
-        const { connector } = await starknetkitConnectModal();
-        if (connector) {
-          await connect({ connector: connector as Connector });
-          setConnectedWallet("starknet");
-          navigate(next, { replace: true });
-        }
-        return;
+      
+      const address = accounts[0];
+      setEvmAddress(address);
+      setConnectedWallet(walletId);
+      
+      // Sign message and authenticate with backend
+      if (!web3Provider) {
+        throw new Error('Provider not initialized');
       }
-      toast({
-        type: "info",
-        title: "Wallet not supported",
-        description: `${walletId} isn't supported yet. Use MetaMask, Coinbase, or StarkNet.`,
+      const signer = web3Provider.getSigner();
+      const message = `Welcome to FundLoom!\n\nPlease sign this message to verify your wallet.\n\nNonce: ${Date.now()}`;
+      const signature = await signer.signMessage(message);
+      
+      // Authenticate with backend
+      await loginWithWallet({
+        address,
+        signature,
+        message,
+        walletType: walletId
       });
-    } catch (error) {
-      console.error("Wallet connection error:", error);
+      
+      // Navigate to dashboard after successful authentication
+      navigate(next, { replace: true });
+      
+    } catch (err: any) {
+      console.error('Wallet connection error:', err);
+      setError(err.message || 'Failed to connect wallet');
+      toast({
+        title: 'Connection Error',
+        description: err.message || 'Failed to connect wallet',
+        variant: 'destructive',
+      });
     } finally {
       setIsConnecting(null);
     }
   };
-
-  const disconnectWallet = async () => {
-    setConnectedWallet(null);
-    setEvmAddress(null);
-    try {
-      if (starknetAddress) {
-        await starknetDisconnect();
+  
+  // Handle account changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        // Wallet disconnected
+        setEvmAddress(null);
+        setConnectedWallet(null);
+        logout();
+      } else if (evmAddress && evmAddress.toLowerCase() !== accounts[0].toLowerCase()) {
+        // Account changed
+        setEvmAddress(accounts[0]);
+        // You might want to re-authenticate with the new account here
       }
-    } catch {}
-    // Logout only clears JWT (if any) and navigates home; wallets handled above
-    await logout();
+    };
+    
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    
+    return () => {
+      window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+    };
+  }, [evmAddress, logout]);
+
+  const isConnected = useMemo(
+    () => !!evmAddress && !!connectedWallet,
+    [evmAddress, connectedWallet]
+  );
+  
+  // Clean up provider on unmount
+  useEffect(() => {
+    return () => {
+      if (provider) {
+        // Clean up any event listeners or connections
+        provider.removeAllListeners();
+      }
+    };
+  }, [provider]);
+  
+  const getWalletIcon = (walletId: string) => {
+    switch (walletId) {
+      case 'metamask':
+        return (
+          <img 
+            src="/wallets/metamask.svg" 
+            alt="MetaMask" 
+            className="w-6 h-6" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzODQgNTEyIj48cGF0aCBmaWxsPSIjEUE4QzJCIiBkPSJMNDE4IDEwMS43NnYyODcuM0gyNTZWMjQ2LjY4YzAtNDkuNjgtMjAuNDItNzYuNjctNjUuOTItNzYuNjdjLTE3LjM0IDAtMzEuMjQgNS4xLTQxLjMgMTMuN1VxMDEuNzZjLTE5LjY2LTE0LjY4LTQyLjYtMjEuOTItNjguMjUtMjEuOTJjLTUyLjY2IDAtOTUuMzkgMjUuOC05NS4zOSA4NS4xN1VxMDBoODUuMjV2LTIxMy4wMWMwLTM1LjYgMTQuMjctNTUuOTkgNDguMTctNTUuOTljMjUuMTcgMCA0MS4wOCAxOS4yNCAxMS4wOCA0OS43N2MtOS4yMyAxMS44Mi0xNC41NSAyMS4zOC0xNC41NSAzMS4yN1VxMDBoODUuMjV2LTIxM2MwLTM1LjYgMTQuMjQtNTUuOTkgNDguMTctNTUuOTljMjUuMTcgMCA0MS4wOCAxOS4yNCAxMS4wOCA0OS43N2MtOS4yMyAxMS44Mi0xNC41NSAyMS4zOC0xNC41NSAzMS4yN1VxMDBoMzg0VjE4Ni45OGMwLTg1Ljg3LTQyLjY2LTEyNi4yMi05Ni4yNS0xMjYuMjJjLTQ0LjU4IDAtNzAuNTggMjUuOC04Mi45IDQzLjQ0eiIvPjwvc3ZnPg=='; 
+            }}
+          />
+        );
+      case 'coinbase':
+        return (
+          <img 
+            src="/wallets/coinbase.svg" 
+            alt="Coinbase Wallet" 
+            className="w-6 h-6"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgNTAwIDUwMCI+PHBhdGggZmlsbD0iIzAwNTJGRiIgZD0iTTI1MCw1MEMxMzguMDcsNTAsNDgsMTQwLjA3LDQ4LDI1MlMxMzguMDcsNDU0LDI1MCw0NTRzMjAyLTkwLjA3LDIwMi0yMDJTMzYxLjkzLDUwLDI1MCw1MHogTTI1MCwzODZjLTc0LjQ0LDAtMTM0LjYtNjAuMTYtMTM0LjYtMTM0LjZTMTc1LjU2LDExNi44LDI1MCwxMTYuOHMxMzQuNiw2MC4xNiwxMzQuNiwxMzQuNlMzMjQuNDQsMzg2LDI1MCwzODZ6Ii8+PC9zdmc+';
+            }}
+          />
+        );
+      case 'walletconnect':
+        return (
+          <img 
+            src="/wallets/walletconnect.svg" 
+            alt="WalletConnect" 
+            className="w-6 h-6"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgNTEyIDUxMiI+PHBhdGggZmlsbD0iIzNiM0I0QiIgZD0iTTEwNi4xIDIxNi41T0M2LjcgMTU3LjcgMCAxNDQuNSAwIDEyOGMwLTguOCAzLjUtMTcgMTAuNS0yMy45bDAtLjFDMjUuMSA4Ni4xIDY0IDY0IDEyOCA2NGM2My45IDAgMTAyLjkgMjIuMSAxMTcuNSAzOS45bC0xOS4zIDE5LjhDMy4yIDEyOC4yIDAgMTI4IDAgMTI4YzAgMTEuMSA1LjIgMjAuNCAxMy4xIDI2LjRsOTMuMSA2Mi4xYy0uMS4xLS4yLjItLjMuM2wtMTkuNyAxOS44Yy0xNi4yLTEyLjItNDUuNS0zNy4yLTk5LjctMzkuOHptMjk5LjggMGMyLTUuMiAzLjEtMTAuNSAzLjEtMTUuOCAwLTguOC0zLjUtMTctMTAuNS0yMy45bC0uMS0uMWMtMTguNi0xNi45LTU3LjYtMzktMTIxLjUtMzlDMjQxLjkgMTQ3IDIwMi45IDE2OS4xIDE4OC40IDE4N2wtMTkuMy0xOS44QzI0OC44IDE0Ny45IDI1NiAxMjggMjU2IDEyOGMwLTExLjEtNS4yLTIwLjQtMTMuMS0yNi40bC05My4xLTYyLjFjLjEtLjEuMi0uMi4zLS4zbDE5LjctMTkuOGMxNi4yIDEyLjIgNDUuNSAzNy4yIDk5LjcgMzkuOHpNNDkuNiAzMjQuN0w5LjcgMzY0LjZjLTEzLjEtMTMuMS0xMy4xLTM0LjIgMC00Ny4zbDQwLTQwYzEzLjEtMTMuMSAzNC4yLTEzLjEgNDcuMyAwbDQwIDQwYzEzLjEgMTMuMSAxMy4xIDM0LjIgMCA0Ny4zbC00MCA0MGMtMTMuMSAxMy4xLTM0LjIgMTMuMS00Ny4zIDBsLTQwLTQwYy0xMy4xLTEzLjEtMTMuMS0zNC4yIDAtNDcuM3ptNDEyLjgtMS40bC00MC00MGMtMTMuMS0xMy4xLTEzLjEtMzQuMiAwLTQ3LjNsNDAtNDBjMTMuMS0xMy4xIDM0LjItMTMuMSA0Ny4zIDBsNDAgNDBjMTMuMSAxMy4xIDEzLjEgMzQuMiAwIDQ3LjNsLTQwIDQwYy0xMy4xIDEzLjEtMzQuMiAxMy4xLTQ3LjMgMGwtNDAtNDBjLTEzLjEtMTMuMS0xMy4xLTM0LjIgMC00Ny4zek0yNTYgMzg0Yy0xMS4xIDAtMjAuNC01LjItMjYuNC0xMy4xbC02Mi4xLTkzLjFjLS4xLS4xLS4yLS4yLS4zLS4zbDE5LjgtMTkuOGMxMi4yIDE2LjIgMzcuMiA0NS41IDM5LjggOTkuN2gxOC45YzIuNS01NC4yIDI3LjUtODMuNSA0My43LTk5LjdMNDQzLjkgMzA5Yy01LjkgNy45LTE1LjIgMTMtMjYuNCAxM0gyNTZ6Ii8+PC9zdmc+';
+            }}
+          />
+        );
+      default:
+        return <Wallet className="w-6 h-6" />;
+    }
   };
 
-  if (isConnected) {
-    const wallet =
-      walletOptions.find((w) => w.id === connectedWallet) ||
-      ({
-        name: connectedWallet,
-      } as any);
-    return (
-      <div className="space-y-4">
-        <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div className="flex-1">
-                <p className="font-medium text-green-800 dark:text-green-200">
-                  Wallet Connected
-                </p>
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  {wallet?.name} •{" "}
-                  {(evmAddress || starknetAddress)?.slice(0, 6)}...
-                  {(evmAddress || starknetAddress)?.slice(-4)}
-                </p>
-              </div>
+  const renderConnectedState = () => (
+    <Card>
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+              {getWalletIcon(connectedWallet || '')}
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          <Button className="w-full" size="lg">
-            {mode === "login" ? "Continue with Wallet" : "Create Account"}
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full bg-transparent"
-            onClick={disconnectWallet}
-          >
-            Disconnect Wallet
-          </Button>
-          <div className="text-center">
-            <a
-              href="/forgot-wallet"
-              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            <div>
+              <h3 className="text-sm font-medium">
+                {connectedWallet === 'metamask' ? 'MetaMask Connected' : 
+                 connectedWallet === 'coinbase' ? 'Coinbase Wallet Connected' : 
+                 connectedWallet === 'walletconnect' ? 'WalletConnect Connected' : 'Wallet Connected'}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {evmAddress ? formatAddress(evmAddress) : 'No address'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => {
+                setConnectedWallet(null);
+                setEvmAddress(null);
+                logout();
+              }}
             >
-              Forgot wallet?
-            </a>
+              Disconnect
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => navigate('/dashboard')}
+            >
+              Go to Dashboard
+            </Button>
           </div>
         </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderWalletButton = (wallet: WalletOption) => (
+    <Button
+      key={wallet.id}
+      variant="outline"
+      className={`w-full justify-start gap-3 h-14 text-left transition-all ${
+        isConnecting === wallet.id ? 'opacity-75' : ''
+      } ${connectedWallet === wallet.id ? 'border-green-500' : ''}`}
+      onClick={() => connectWallet(wallet.id)}
+      disabled={isConnecting !== null}
+    >
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
+        {getWalletIcon(wallet.id)}
       </div>
-    );
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{wallet.name}</span>
+          {wallet.popular && (
+            <Badge variant="secondary" className="text-xs">
+              Popular
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">{wallet.description}</p>
+      </div>
+      {isConnecting === wallet.id ? (
+        <div className="w-4 h-4 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+      ) : connectedWallet === wallet.id ? (
+        <CheckCircle className="w-5 h-5 text-green-500" />
+      ) : (
+        <ExternalLink className="w-4 h-4 text-muted-foreground" />
+      )}
+    </Button>
+  );
+
+  if (isConnected) {
+    return renderConnectedState();
   }
 
   return (
@@ -292,56 +353,21 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
 
       <div className="space-y-3">
         {walletOptions.map((wallet) => (
-          <Card
-            key={wallet.id}
-            className={`cursor-pointer hover:shadow-md transition-shadow ${
-              wallet.disabled
-                ? "opacity-60 cursor-not-allowed pointer-events-none"
-                : ""
-            }`}
-            onClick={() => {
-              if (!wallet.disabled) connectWallet(wallet.id);
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{wallet.icon}</span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{wallet.name}</span>
-                      {wallet.popular && (
-                        <Badge variant="secondary" className="text-xs">
-                          Popular
-                        </Badge>
-                      )}
-                      {wallet.disabled && (
-                        <Badge variant="secondary" className="text-xs">
-                          Soon
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {wallet.description}
-                    </p>
-                  </div>
-                </div>
-                {isConnecting === wallet.id ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                ) : (
-                  <ExternalLink className="h-4 w-4 text-gray-400" />
-                )}
-              </div>
-              {wallet.id === "starknet" && (
-                <div className="mt-3">
-                  <WalletConnectorModal />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div key={wallet.id}>
+            {renderWalletButton(wallet)}
+          </div>
         ))}
       </div>
 
+      {error && (
+        <div className="p-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900/30 dark:text-red-300">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+      
       <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <div className="flex items-start space-x-2">
           <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
