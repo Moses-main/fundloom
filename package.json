@@ -22,6 +22,7 @@
     "@starknet-react/core": "^3.7.4",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.11",
+    "@walletconnect/ethereum-provider": "^2.23.1",
     "@web3modal/ethereum": "^2.7.1",
     "@web3modal/ethers": "^5.1.11",
     "@web3modal/react": "^2.7.1",

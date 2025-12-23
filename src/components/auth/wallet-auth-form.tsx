@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -8,9 +8,25 @@ import { Badge } from "../../components/ui/Badge";
 import { Wallet, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
-import { formatAddress } from "@/lib/utils";
-import { providers, Signer } from "ethers";
+import { formatAddress, isMobile } from "@/lib/utils";
+import { providers } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
+import WalletConnectProvider from "@walletconnect/ethereum-provider";
+
+// WalletConnect configuration
+const walletConnectConfig = {
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
+  chains: [1], // Ethereum Mainnet
+  showQrModal: true,
+  qrModalOptions: {
+    themeVariables: {
+      '--w3m-z-index': '10000', // Ensure it's above other elements
+    },
+  },
+};
+
+// Check if we're in a mobile browser
+const isMobileDevice = isMobile();
 
 declare global {
   interface Window {
@@ -76,6 +92,79 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   }, [isAuthenticated, next, navigate]);
 
+  // Initialize WalletConnect provider
+  const initWalletConnect = useCallback(async () => {
+    try {
+      const walletConnectProvider = new WalletConnectProvider(walletConnectConfig);
+      
+      // Subscribe to accounts change
+      walletConnectProvider.on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length === 0) {
+          // Wallet disconnected
+          setEvmAddress(null);
+          setConnectedWallet(null);
+          setProvider(null);
+        } else {
+          setEvmAddress(accounts[0]);
+        }
+      });
+
+      // Subscribe to chainId change
+      walletConnectProvider.on('chainChanged', (chainId: number) => {
+        console.log('Chain changed:', chainId);
+        // You might want to handle chain changes here
+      });
+
+      // Subscribe to session disconnection
+      walletConnectProvider.on('disconnect', (code: number, reason: string) => {
+        console.log('WalletConnect disconnected:', code, reason);
+        setEvmAddress(null);
+        setConnectedWallet(null);
+        setProvider(null);
+      });
+
+      return walletConnectProvider;
+    } catch (error) {
+      console.error('Error initializing WalletConnect:', error);
+      throw error;
+    }
+  }, []);
+
+  // Disconnect wallet
+  const disconnectWallet = async () => {
+    try {
+      if (connectedWallet === 'walletconnect' && provider) {
+        // For WalletConnect, we need to manually disconnect the session
+        const walletConnectProvider = (provider as any).provider;
+        if (walletConnectProvider?.disconnect) {
+          await walletConnectProvider.disconnect();
+        }
+      }
+      
+      // Clear state
+      setEvmAddress(null);
+      setConnectedWallet(null);
+      setProvider(null);
+      setError(null);
+      
+      // Logout from the app
+      await logout();
+      
+      toast({
+        title: 'Wallet disconnected',
+        description: 'You have been successfully disconnected from your wallet.',
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to disconnect wallet. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Handle wallet connection
   const connectWallet = async (walletId: WalletOption['id']) => {
     try {
@@ -89,47 +178,61 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       switch (walletId) {
         case 'metamask':
           if (!window.ethereum?.isMetaMask) {
-            window.open('https://metamask.io/download.html', '_blank');
-            throw new Error('Please install MetaMask extension');
+            if (isMobileDevice) {
+              window.open('https://metamask.app.link/dapp/' + window.location.hostname, '_blank');
+            } else {
+              window.open('https://metamask.io/download.html', '_blank');
+            }
+            throw new Error('Please install MetaMask');
           }
-          provider = new providers.Web3Provider(window.ethereum, 'any');
-          accounts = await provider.send('eth_requestAccounts', []);
+          
+          // Check if we're in a mobile browser and MetaMask is not installed
+          if (isMobileDevice && !window.ethereum?.isMetaMask) {
+            window.open(`https://metamask.app.link/dapp/${window.location.hostname}`, '_blank');
+            throw new Error('Please open in MetaMask browser or install MetaMask');
+          }
+          
+          web3Provider = new Web3Provider(window.ethereum, 'any');
+          setProvider(web3Provider);
+          accounts = await web3Provider.send('eth_requestAccounts', []);
           break;
           
         case 'coinbase':
+          if (isMobileDevice) {
+            // On mobile, try to use WalletLink/Coinbase Wallet app
+            window.open(`https://go.cb-w.com/`, '_blank');
+            throw new Error('Please use Coinbase Wallet app');
+          }
+          
           if (!window.ethereum?.isCoinbaseWallet && !window.ethereum?.providers?.find(p => p.isCoinbaseWallet)) {
             window.open('https://www.coinbase.com/wallet/downloads', '_blank');
             throw new Error('Please install Coinbase Wallet extension');
           }
+          
           // Use Coinbase provider if available, otherwise fallback to window.ethereum
           const coinbaseProvider = window.ethereum?.providers?.find(p => p.isCoinbaseWallet) || window.ethereum;
-          web3Provider = new providers.Web3Provider(coinbaseProvider, 'any');
+          web3Provider = new Web3Provider(coinbaseProvider, 'any');
           setProvider(web3Provider);
           accounts = await web3Provider.send('eth_requestAccounts', []);
           break;
           
         case 'walletconnect':
-          // For WalletConnect, we'll use Web3Modal which is already set up in the project
-          // This is a simplified version - you might need to adjust based on your Web3Modal setup
-          // For WalletConnect, we'll use window.ethereum for now
-          // In a real implementation, you'd use the WalletConnect provider
-          if (!window.ethereum) {
-            throw new Error('No Ethereum provider found');
-          }
-          web3Provider = new providers.Web3Provider(window.ethereum, 'any');
-          setProvider(web3Provider);
-          accounts = await web3Provider.send('eth_requestAccounts', []);
+          const walletConnectProvider = await initWalletConnect();
           
-          // Note: For production, implement proper WalletConnect provider
-          // import WalletConnectProvider from '@walletconnect/web3-provider';
-          // const provider = new WalletConnectProvider({
-          //   rpc: {
-          //     1: 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
-          //     // Add other chains as needed
-          //   },
-          // });
-          // await provider.enable();
-          // web3Provider = new providers.Web3Provider(provider);
+          // Enable session (triggers QR Code modal)
+          await walletConnectProvider.enable();
+          
+          // Create Web3Provider instance
+          web3Provider = new Web3Provider(walletConnectProvider);
+          setProvider(web3Provider);
+          
+          // Get accounts
+          accounts = await web3Provider.listAccounts();
+          
+          // If no accounts, request them
+          if (!accounts || accounts.length === 0) {
+            accounts = await web3Provider.send('eth_requestAccounts', []);
+          }
           break;
           
         default:
@@ -176,16 +279,16 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   };
   
-  // Handle account changes
+  // Handle account and chain changes for injected providers
   useEffect(() => {
-    if (!window.ethereum) return;
+    if (!window.ethereum || connectedWallet === 'walletconnect') return;
     
     const handleAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
         // Wallet disconnected
         setEvmAddress(null);
         setConnectedWallet(null);
-        logout();
+        setProvider(null);
       } else if (evmAddress && evmAddress.toLowerCase() !== accounts[0].toLowerCase()) {
         // Account changed
         setEvmAddress(accounts[0]);
@@ -193,12 +296,52 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       }
     };
     
+    const handleChainChanged = (chainId: string) => {
+      console.log('Chain changed:', chainId);
+      // You might want to handle chain changes here
+      window.location.reload();
+    };
+    
+    const handleDisconnect = () => {
+      setEvmAddress(null);
+      setConnectedWallet(null);
+      setProvider(null);
+    };
+    
+    // Set up event listeners
     window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+    window.ethereum.on('disconnect', handleDisconnect);
     
     return () => {
+      // Clean up event listeners
       window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum?.removeListener('chainChanged', handleChainChanged);
+      window.ethereum?.removeListener('disconnect', handleDisconnect);
     };
-  }, [evmAddress, logout]);
+  }, [evmAddress, connectedWallet]);
+
+  // Check for existing WalletConnect session on mount
+  useEffect(() => {
+    const checkWalletConnectSession = async () => {
+      try {
+        const walletConnectProvider = new WalletConnectProvider(walletConnectConfig);
+        if (walletConnectProvider.connected) {
+          const web3Provider = new Web3Provider(walletConnectProvider);
+          const accounts = await web3Provider.listAccounts();
+          if (accounts.length > 0) {
+            setEvmAddress(accounts[0]);
+            setConnectedWallet('walletconnect');
+            setProvider(web3Provider);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking WalletConnect session:', error);
+      }
+    };
+    
+    checkWalletConnectSession();
+  }, []);
 
   const isConnected = useMemo(
     () => !!evmAddress && !!connectedWallet,
