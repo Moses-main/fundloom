@@ -23,10 +23,17 @@ const walletConnectConfig = {
       '--w3m-z-index': '10000', // Ensure it's above other elements
     },
   },
+  metadata: {
+    name: 'FundLoom',
+    description: 'FundLoom - Decentralized Crowdfunding Platform',
+    url: window.location.origin,
+    icons: [`${window.location.origin}/logo192.png`]
+  }
 };
 
-// Check if we're in a mobile browser
+// Enhanced mobile detection
 const isMobileDevice = isMobile();
+const isInjectedWalletAvailable = typeof window.ethereum !== 'undefined';
 
 declare global {
   interface Window {
@@ -92,14 +99,18 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   }, [isAuthenticated, next, navigate]);
 
-  // Initialize WalletConnect provider
+  // Initialize WalletConnect provider with better error handling
   const initWalletConnect = useCallback(async () => {
     try {
+      if (!walletConnectConfig.projectId || walletConnectConfig.projectId === 'YOUR_PROJECT_ID') {
+        throw new Error('WalletConnect project ID is not configured. Please set VITE_WALLETCONNECT_PROJECT_ID in your .env file.');
+      }
+
       const walletConnectProvider = new WalletConnectProvider(walletConnectConfig);
       
-      // Subscribe to accounts change
-      walletConnectProvider.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length === 0) {
+      // Set up event listeners
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (!accounts || accounts.length === 0) {
           // Wallet disconnected
           setEvmAddress(null);
           setConnectedWallet(null);
@@ -107,26 +118,35 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         } else {
           setEvmAddress(accounts[0]);
         }
-      });
+      };
 
-      // Subscribe to chainId change
-      walletConnectProvider.on('chainChanged', (chainId: number) => {
+      const handleChainChanged = (chainId: number) => {
         console.log('Chain changed:', chainId);
-        // You might want to handle chain changes here
-      });
+        // Refresh the page on chain change
+        window.location.reload();
+      };
 
-      // Subscribe to session disconnection
-      walletConnectProvider.on('disconnect', (code: number, reason: string) => {
+      const handleDisconnect = (code: number, reason: string) => {
         console.log('WalletConnect disconnected:', code, reason);
         setEvmAddress(null);
         setConnectedWallet(null);
         setProvider(null);
-      });
+      };
 
-      return walletConnectProvider;
+      // Subscribe to events
+      walletConnectProvider.on('accountsChanged', handleAccountsChanged);
+      walletConnectProvider.on('chainChanged', handleChainChanged);
+      walletConnectProvider.on('disconnect', handleDisconnect);
+
+      // Cleanup function
+      return () => {
+        walletConnectProvider.off('accountsChanged', handleAccountsChanged);
+        walletConnectProvider.off('chainChanged', handleChainChanged);
+        walletConnectProvider.off('disconnect', handleDisconnect);
+      };
     } catch (error) {
       console.error('Error initializing WalletConnect:', error);
-      throw error;
+      throw new Error(`Failed to connect with WalletConnect: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
 
@@ -165,7 +185,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     }
   };
 
-  // Handle wallet connection
+  // Handle wallet connection with improved error handling and mobile support
   const connectWallet = async (walletId: WalletOption['id']) => {
     try {
       setError(null);
@@ -177,24 +197,55 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       // Handle different wallet connections
       switch (walletId) {
         case 'metamask':
-          if (!window.ethereum?.isMetaMask) {
+          if (!isInjectedWalletAvailable) {
+            const metamaskAppUrl = `https://metamask.app.link/dapp/${window.location.hostname}`;
             if (isMobileDevice) {
-              window.open('https://metamask.app.link/dapp/' + window.location.hostname, '_blank');
+              window.open(metamaskAppUrl, '_blank');
+              throw new Error('Please install MetaMask or open in MetaMask browser');
             } else {
               window.open('https://metamask.io/download.html', '_blank');
+              throw new Error('Please install MetaMask extension');
             }
-            throw new Error('Please install MetaMask');
           }
           
-          // Check if we're in a mobile browser and MetaMask is not installed
-          if (isMobileDevice && !window.ethereum?.isMetaMask) {
-            window.open(`https://metamask.app.link/dapp/${window.location.hostname}`, '_blank');
-            throw new Error('Please open in MetaMask browser or install MetaMask');
+          if (!window.ethereum?.isMetaMask) {
+            throw new Error('MetaMask not detected');
           }
           
-          web3Provider = new Web3Provider(window.ethereum, 'any');
-          setProvider(web3Provider);
-          accounts = await web3Provider.send('eth_requestAccounts', []);
+          try {
+            web3Provider = new Web3Provider(window.ethereum, 'any');
+            setProvider(web3Provider);
+            accounts = await web3Provider.send('eth_requestAccounts', []);
+            
+            if (!accounts || accounts.length === 0) {
+              throw new Error('No accounts found. Please unlock your wallet.');
+            }
+            
+            setConnectedWallet('metamask');
+            setEvmAddress(accounts[0]);
+            
+            // Set up event listeners for MetaMask
+            window.ethereum.on('accountsChanged', (newAccounts: string[]) => {
+              if (!newAccounts || newAccounts.length === 0) {
+                // Handle account disconnection
+                setEvmAddress(null);
+                setConnectedWallet(null);
+                setProvider(null);
+              } else if (newAccounts[0] !== evmAddress) {
+                // Account changed
+                setEvmAddress(newAccounts[0]);
+              }
+            });
+            
+            window.ethereum.on('chainChanged', () => {
+              window.location.reload();
+            });
+            
+          } catch (err) {
+            const error = err as Error;
+            console.error('MetaMask connection error:', error);
+            throw new Error(`Failed to connect to MetaMask: ${error.message}`);
+          }
           break;
           
         case 'coinbase':

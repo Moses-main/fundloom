@@ -31,14 +31,12 @@ const Shell: React.FC = () => {
         {activeTab === "profile" && <ProfilePage />}
         {activeTab === "wallet" && <WalletTab />}
         {activeTab === "campaigns" && (
-          user?.id ? (
-            <MyCampaignsPage />
-          ) : hasJwt && !user?.id ? (
-            <p className="text-muted-foreground">Loading your account…</p>
+          user?.id || hasJwt ? (
+            <CampaignsPage />
           ) : (
             <div className="space-y-3">
               <p className="text-muted-foreground">
-                Please sign in to view campaigns you've created.
+                Please sign in to view campaigns.
               </p>
               <Button asChild>
                 <Link to="/auth">Sign In</Link>

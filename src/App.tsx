@@ -57,7 +57,14 @@ function App() {
                         path="/auth/callback"
                         element={<OAuthCallbackPage />}
                       />
-                      <Route path="/campaigns" element={<CampaignsPage />} />
+                      <Route 
+                        path="/campaigns" 
+                        element={
+                          <ProtectedRoute>
+                            <CampaignsPage />
+                          </ProtectedRoute>
+                        } 
+                      />
                       {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
                       <Route
                         path="/dashboard"

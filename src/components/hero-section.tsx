@@ -31,7 +31,10 @@ export function HeroSection() {
 
             <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl animate-fade-in-up">
               Fund the Future,
-              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Empower Dreams</span>
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                {" "}
+                Empower Dreams
+              </span>
             </h1>
 
             <p className="mb-8 text-lg sm:text-xl text-muted-foreground max-w-2xl lg:max-w-none lg:pr-6 leading-relaxed animate-fade-in-up">
@@ -50,14 +53,6 @@ export function HeroSection() {
                   Start Your Campaign
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="text-base sm:text-lg px-7 py-5 bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:bg-white/90 text-gray-700 hover:border-indigo-300"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Watch Demo
               </Button>
             </div>
 

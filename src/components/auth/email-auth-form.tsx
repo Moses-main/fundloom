@@ -1,346 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import * as z from "zod";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/Form";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
-import { forgotPassword } from "@/lib/api";
-import {
-  login as loginEmailPwd,
-  signup as signupEmailPwd,
-} from "@/modules/auth/emailPassword";
-import { startGoogleOAuth } from "@/services/auth/oauthAuth";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Wallet } from "lucide-react";
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+// Email authentication has been disabled
+// Only wallet authentication is available
 
-const signupSchema = z
-  .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type LoginFormData = z.infer<typeof loginSchema>;
-type SignupFormData = z.infer<typeof signupSchema>;
+interface EmailAuthFormProps {
+  mode: "login" | "signup";
+}
 
 interface EmailAuthFormProps {
   mode: "login" | "signup";
 }
 
 export function EmailAuthForm({ mode }: EmailAuthFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { show: toast } = useToast();
 
-  const paramsInit = new URLSearchParams(location.search);
-  const emailPrefill = paramsInit.get("email") || "";
-
-  const form = useForm<LoginFormData | SignupFormData>({
-    resolver: zodResolver(mode === "login" ? loginSchema : signupSchema),
-    defaultValues:
-      mode === "login"
-        ? { email: emailPrefill, password: "" }
-        : { name: "", email: "", password: "", confirmPassword: "" },
-  });
-
-  // Reset form defaults when switching between login/signup or when email query changes
-  useEffect(() => {
-    if (mode === "login") {
-      form.reset({ email: emailPrefill, password: "" } as any);
-    } else {
-      form.reset({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-      } as any);
-    }
-  }, [mode, emailPrefill]);
-
-  const onSubmit = async (data: LoginFormData | SignupFormData) => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams(location.search);
-      if (mode === "signup") {
-        const { name, email, password, confirmPassword } =
-          data as SignupFormData;
-        const result = await signupEmailPwd({
-          name,
-          email,
-          password,
-          confirmPassword,
-        });
-        toast({
-          type: "success",
-          title: "Account created",
-          description: "Please sign in to continue",
-        });
-        // After signup, always go to login with email prefilled
-        navigate(
-          result.next || `/auth?mode=login&email=${encodeURIComponent(email)}`,
-          { replace: true }
-        );
-        return;
-      } else {
-        const { email, password } = data as LoginFormData;
-        const { next } = await loginEmailPwd({ email, password });
-        toast({
-          type: "success",
-          title: "Signed in",
-          description: "Login successful",
-        });
-        const override = params.get("next");
-        navigate(override || next || "/dashboard?tab=overview", {
-          replace: true,
-        });
-        return;
-      }
-    } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : "Authentication failed";
-      console.error("Authentication error:", error);
-      toast({ type: "error", title: "Auth error", description: msg });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setIsOAuthLoading(true);
-    try {
-      const params = new URLSearchParams(location.search);
-      const next = params.get("next") || "/dashboard";
-      // Start Google OAuth via backend (Passport) with next param
-      startGoogleOAuth(next);
-    } catch (error) {
-      console.error("Google OAuth error:", error);
-    } finally {
-      setIsOAuthLoading(false);
-    }
+  const handleWalletConnect = () => {
+    // This will be handled by the parent component
+    // which should have a WalletAuthForm component
+    navigate("?mode=wallet", { replace: true });
   };
 
   return (
-    <Form {...form}>
-      <div className="space-y-3 mb-4">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
-          onClick={handleGoogleAuth}
-          disabled={isOAuthLoading}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <FcGoogle className="h-5 w-5" />
-            <span>
-              {isOAuthLoading
-                ? "Connecting..."
-                : mode === "login"
-                ? "Continue with Google"
-                : "Continue with Google"}
-            </span>
-          </div>
-        </Button>
-        <div className="flex items-center">
-          <div className="h-px bg-border flex-1" />
-          <span className="px-3 text-xs text-muted-foreground">or</span>
-          <div className="h-px bg-border flex-1" />
+    <div className="space-y-6 text-center">
+      <div className="space-y-2">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <Wallet className="h-6 w-6 text-primary" />
         </div>
+        <h2 className="text-2xl font-bold">Wallet Authentication</h2>
+        <p className="text-muted-foreground">
+          Please connect your wallet to continue
+        </p>
       </div>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {mode === "signup" && (
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Enter your full name"
-                      className="pl-10"
-                      {...field}
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="pl-10"
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    className="pl-10 pr-10"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {mode === "signup" && (
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      className="pl-10 pr-10"
-                      {...field}
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading
-            ? "Please wait..."
-            : mode === "login"
-            ? "Sign In"
-            : "Create Account"}
-        </Button>
-
-        {mode === "login" && (
-          <div className="text-center">
-            <button
-              type="button"
-              className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              onClick={async () => {
-                const email = (form.getValues() as any).email as string;
-                if (!email) {
-                  toast({
-                    type: "warning",
-                    title: "Enter email",
-                    description: "Please enter your email above first",
-                  });
-                  return;
-                }
-                try {
-                  const res = await forgotPassword({ email });
-                  if (res?.resetToken) {
-                    toast({
-                      type: "info",
-                      title: "Reset token generated",
-                      description: `Dev token: ${res.resetToken}`,
-                    });
-                  } else {
-                    toast({
-                      type: "success",
-                      title: "Email sent",
-                      description:
-                        "Password reset link sent if the email exists",
-                    });
-                  }
-                } catch (e: any) {
-                  toast({
-                    type: "error",
-                    title: "Reset failed",
-                    description: e?.message || "Could not start password reset",
-                  });
-                }
-              }}
+      <Button
+        type="button"
+        className="w-full"
+        onClick={handleWalletConnect}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <svg
+              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
             >
-              Forgot your password?
-            </button>
-          </div>
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Connecting...
+          </>
+        ) : (
+          'Connect Wallet'
         )}
-      </form>
-    </Form>
+      </Button>
+    </div>
   );
 }
