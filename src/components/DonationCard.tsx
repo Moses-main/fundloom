@@ -6,9 +6,8 @@ import { Heart, Share2, CreditCard, Wallet, ExternalLink } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "./ui/ToastProvider";
 import { useNavigate } from "react-router-dom";
-import { useContract, useAccount } from "@starknet-react/core";
+import { ethers } from "ethers";
 import { FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI } from "../config/contracts";
-import { num, Call, InvokeFunctionResponse } from 'starknet';
 
 type PaymentMethod = 'crypto' | 'card' | 'bank';
 
@@ -39,31 +38,85 @@ export function DonationCard({ campaign }: DonationCardProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto');
   const [isDonating, setIsDonating] = useState(false);
   const [transactionHash, setTransactionHash] = useState<string | undefined>();
+  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
   
   const { isAuthenticated } = useAuth();
   const { show: showToast } = useToast();
   const navigate = useNavigate();
   
-  // Get the connected account
-  const { account } = useAccount();
+  // Check if MetaMask is installed
+  const isMetaMaskInstalled = typeof window.ethereum !== 'undefined';
   
-  // Initialize the contract with proper typing
-  const { contract } = useContract({
-    abi: FUNDLOOM_ABI,
-    address: FUNDLOOM_CONTRACT_ADDRESS,
-  });
-  
-  // Helper to check if account is a valid StarkNet account
-  const isStarknetAccount = (account: any): account is {
-    execute: (calls: Call | Call[]) => Promise<InvokeFunctionResponse>;
-  } => {
-    return account && typeof account.execute === 'function';
+  // Initialize contract
+  const getContract = () => {
+    if (!isMetaMaskInstalled) return null;
+    
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = provider.getSigner();
+    return new ethers.Contract(FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI, signer);
   };
+  
+  // Check if wallet is connected
+  const checkIfWalletIsConnected = async () => {
+    if (!isMetaMaskInstalled) return;
+    
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length > 0) {
+        setCurrentAccount(accounts[0]);
+      }
+    } catch (error) {
+      console.error('Error checking connected accounts:', error);
+    }
+  };
+  
+  // Connect wallet handler
+  const connectWallet = async () => {
+    if (!isMetaMaskInstalled) {
+      showToast({
+        title: "MetaMask Not Found",
+        description: "Please install MetaMask to connect your wallet.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      setCurrentAccount(accounts[0]);
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      showToast({
+        title: "Connection Error",
+        description: "Failed to connect wallet. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Initialize wallet connection on component mount
+  useEffect(() => {
+    checkIfWalletIsConnected();
+    
+    // Listen for account changes
+    if (isMetaMaskInstalled) {
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        setCurrentAccount(accounts[0] || null);
+      });
+    }
+    
+    return () => {
+      if (isMetaMaskInstalled) {
+        window.ethereum.removeListener('accountsChanged', () => {});
+      }
+    };
+  }, []);
   
   // Helper to convert ETH to Wei
   const toWei = (eth: string): string => {
-    const wei = BigInt(Math.floor(Number(eth) * 1e18));
-    return wei.toString();
+    return ethers.parseEther(eth).toString();
   };
   
   // Effect to handle transaction status
@@ -117,71 +170,52 @@ export function DonationCard({ campaign }: DonationCardProps) {
     setIsDonating(true);
     
     try {
-      if (paymentMethod === 'crypto') {
-        if (!contract) {
-          throw new Error("Contract not initialized");
-        }
+      if (paymentMethod === 'crypto' && currentAccount) {
+        const contract = getContract();
+        if (!contract) throw new Error("Failed to initialize contract");
         
-        // Convert ETH amount to Wei (1 ETH = 1e18 Wei)
+        // Convert donation amount to Wei
         const amountInWei = toWei(donationAmount);
         
-        if (!account) {
-          throw new Error("No account connected");
-        }
+        // Call the donate function on the contract
+        const tx = await contract.donate(
+          campaign.id.toString(),
+          { value: amountInWei }
+        );
         
-        if (!isStarknetAccount(account)) {
-          throw new Error("Invalid StarkNet account");
-        }
+        // Wait for transaction to be mined
+        await tx.wait();
         
-        // Create the contract call with proper typing and include value in calldata
-        const call: Call = {
-          contractAddress: FUNDLOOM_CONTRACT_ADDRESS,
-          entrypoint: 'donate',
-          calldata: [
-            campaign.id.toString(),
-            amountInWei  // Include the value as part of the calldata
-          ]
-        };
-        
-        // Execute the transaction
-        const tx = await account.execute(call);
-        
-        // Wait for transaction to be processed
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Store the transaction hash to show to the user
-        if (tx.transaction_hash) {
-          setTransactionHash(tx.transaction_hash);
-        }
+        setTransactionHash(tx.hash);
         
         showToast({
-          title: "Transaction Submitted!",
-          description: "Your donation is being processed on the blockchain."
+          title: "Donation Successful!",
+          description: `Thank you for your donation of ${donationAmount} ETH to ${campaign.title}`,
         });
+        
+        // Reset form
+        setDonationAmount("");
       } else {
-        // For fiat payments, we'll handle this differently (e.g., Stripe integration)
-        // For now, we'll just show a success message
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Handle other payment methods (card, bank transfer)
+        // This would typically involve calling your backend API
+        // to process the payment
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         showToast({
-          title: "Thank you for your donation!",
-          description: `You've successfully donated $${donationAmount} to this campaign.`
+          title: "Donation Processed",
+          description: `Your donation of $${donationAmount} has been processed successfully!`,
         });
+        
+        // Reset form
+        setDonationAmount("");
       }
-      
-      // Reset the form
-      setDonationAmount("");
     } catch (error) {
-      console.error("Donation error:", error);
-      
-      let errorMessage = "There was an error processing your donation. Please try again.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      console.error('Error processing donation:', error);
       
       showToast({
         title: "Donation Failed",
-        description: errorMessage
+        description: error instanceof Error ? error.message : "There was an error processing your donation. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsDonating(false);
@@ -209,11 +243,11 @@ export function DonationCard({ campaign }: DonationCardProps) {
           </button>
           {transactionHash && (
             <a 
-              href={`https://voyager.online/tx/${transactionHash}`} 
+              href={`https://etherscan.io/tx/${transactionHash}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-indigo-600 hover:text-indigo-800"
-              title="View on Voyager"
+              title="View on Etherscan"
             >
               <ExternalLink className="w-5 h-5" />
             </a>
@@ -322,6 +356,37 @@ export function DonationCard({ campaign }: DonationCardProps) {
           className="w-full bg-indigo-600 hover:bg-indigo-700 mt-2"
           disabled={isDonating || !donationAmount}
         >
+          {paymentMethod === 'crypto' && (
+            <div className="mt-4 p-4 bg-muted/20 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">
+                  {currentAccount ? 'Connected Wallet' : 'Connect Wallet'}
+                </span>
+              </div>
+              {currentAccount ? (
+                <div className="text-sm text-muted-foreground">
+                  {`${currentAccount.slice(0, 6)}...${currentAccount.slice(-4)}`}
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={connectWallet}
+                  disabled={!isMetaMaskInstalled}
+                >
+                  {isMetaMaskInstalled ? 'Connect MetaMask' : 'Install MetaMask'}
+                </Button>
+              )}
+              {!isMetaMaskInstalled && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  MetaMask is required for crypto donations
+                </p>
+              )}
+            </div>
+          )}
           {isDonating ? (
             <span className="flex items-center justify-center">
               <svg

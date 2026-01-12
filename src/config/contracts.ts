@@ -9,27 +9,71 @@ export const FUNDLOOM_ABI = [
     "name": "donate",
     "inputs": [
       {
-        "name": "campaign_id",
-        "type": "core::felt252"
+        "name": "campaignId",
+        "type": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256"
       }
     ],
     "outputs": [],
-    "state_mutability": "external"
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "createCampaign",
+    "inputs": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "name": "targetAmount",
+        "type": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "campaignId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   }
 ] as const;
 
 // Network configuration
 export const NETWORK = {
-  // Testnet
+  // Testnet (Goerli)
   testnet: {
     name: 'goerli',
-    chainId: '0x534e5f474f45524c49', // SN_GOERLI in hex
-    rpcUrl: 'https://starknet-goerli.infura.io/v3/YOUR_INFURA_PROJECT_ID'
+    chainId: 5, // Goerli chain ID
+    rpcUrl: 'https://goerli.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+    blockExplorer: 'https://goerli.etherscan.io'
   },
   // Mainnet
   mainnet: {
-    name: 'mainnet',
-    chainId: '0x534e5f4d41494e', // SN_MAIN in hex
-    rpcUrl: 'https://starknet-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'
+    name: 'ethereum',
+    chainId: 1, // Ethereum mainnet chain ID
+    rpcUrl: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+    blockExplorer: 'https://etherscan.io'
+  },
+  // Local development
+  localhost: {
+    name: 'localhost',
+    chainId: 31337, // Common local chain ID (e.g., Hardhat Network)
+    rpcUrl: 'http://localhost:8545',
+    blockExplorer: ''
   }
-};
+} as const;
+
+export type NetworkName = keyof typeof NETWORK;

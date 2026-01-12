@@ -441,21 +441,21 @@ export async function deleteAccount() {
   return apiFetch<{}>(`/users/account`, { method: "DELETE" });
 }
 
-export async function connectWallet(input: { chain: "evm" | "starknet"; address: string }) {
-  return apiFetch<{ user: any }>(`/auth/connect-wallet`, {
+export function connectWallet(input: { chain: "evm"; address: string }) {
+  return apiFetch<{ success: boolean }>("/auth/wallet/connect", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export async function disconnectWallet(input: { chain: "evm" | "starknet" }) {
-  return apiFetch<{ user: any }>(`/auth/disconnect-wallet`, {
+export function disconnectWallet(input: { chain: "evm" }) {
+  return apiFetch<{ success: boolean }>("/auth/wallet/disconnect", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export async function disconnectGoogle() {
+export function disconnectGoogle() {
   return apiFetch<{ user: any }>(`/auth/disconnect-google`, {
     method: "POST",
   });

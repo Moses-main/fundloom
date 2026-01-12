@@ -17,7 +17,6 @@ const ForgotWalletPage = lazy(() => import("./pages/ForgotWallet"));
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const CampaignsPage = lazy(() => import("./pages/CampaignsPage"));
-import StarknetProvider from "./utils/starknetProvider";
 import { ToastProvider } from "./components/ui/ToastProvider";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const CampaignDonorsPage = lazy(() => import("./pages/CampaignDonorsPage"));
@@ -36,8 +35,7 @@ import LoadingOverlay from "./components/ui/LoadingOverlay";
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="Fundloom-theme">
-      <StarknetProvider>
-        <ToastProvider>
+      <ToastProvider>
           <LoadingProvider>
             <AuthProvider>
               <AppProvider>
@@ -137,7 +135,6 @@ function App() {
             </AuthProvider>
           </LoadingProvider>
         </ToastProvider>
-      </StarknetProvider>
     </ThemeProvider>
   );
 }

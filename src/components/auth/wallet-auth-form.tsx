@@ -13,14 +13,26 @@ import { providers } from "ethers";
 import { Web3Provider } from "@ethersproject/providers";
 import WalletConnectProvider from "@walletconnect/ethereum-provider";
 
+// Supported networks configuration
+const SUPPORTED_NETWORKS = {
+  1: { name: 'Ethereum Mainnet', symbol: 'ETH' },
+  5: { name: 'Goerli Testnet', symbol: 'ETH' },
+  137: { name: 'Polygon Mainnet', symbol: 'MATIC' },
+  80001: { name: 'Mumbai Testnet', symbol: 'MATIC' },
+  11155111: { name: 'Sepolia Testnet', symbol: 'ETH' },
+} as const;
+
+type SupportedChainId = keyof typeof SUPPORTED_NETWORKS;
+
 // WalletConnect configuration
 const walletConnectConfig = {
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [1], // Ethereum Mainnet
+  chains: Object.keys(SUPPORTED_NETWORKS).map(Number) as SupportedChainId[],
   showQrModal: true,
   qrModalOptions: {
     themeVariables: {
-      '--w3m-z-index': '10000', // Ensure it's above other elements
+      '--w3m-z-index': '10000',
+      '--w3m-accent-color': '#4f46e5',
     },
   },
   metadata: {
@@ -76,12 +88,19 @@ interface WalletAuthFormProps {
   mode: "login" | "signup";
 }
 
+// Local storage keys
+const STORAGE_KEYS = {
+  CONNECTED_WALLET: 'fundloom_connected_wallet',
+  LAST_CONNECTION: 'fundloom_last_connection',
+} as const;
+
 export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<WalletOption['id'] | null>(null);
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<Web3Provider | null>(null);
+  const [networkError, setNetworkError] = useState<string | null>(null);
   const { show: toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,12 +111,65 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     return params.get("next") || "/dashboard";
   }, [location.search]);
 
+  // Check for existing wallet connection on mount
+  useEffect(() => {
+    const checkPersistedSession = async () => {
+      try {
+        const savedWallet = localStorage.getItem(STORAGE_KEYS.CONNECTED_WALLET) as WalletOption['id'] | null;
+        if (savedWallet && !isAuthenticated) {
+          await connectWallet(savedWallet, true);
+        }
+      } catch (error) {
+        console.error('Failed to restore wallet session:', error);
+        localStorage.removeItem(STORAGE_KEYS.CONNECTED_WALLET);
+      }
+    };
+
+    checkPersistedSession();
+  }, [isAuthenticated]);
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate(next, { replace: true });
     }
   }, [isAuthenticated, next, navigate]);
+
+  // Check if the current network is supported
+  const checkNetwork = async (provider: Web3Provider): Promise<boolean> => {
+    try {
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
+      
+      if (!(chainId in SUPPORTED_NETWORKS)) {
+        const supportedChains = Object.entries(SUPPORTED_NETWORKS)
+          .map(([id, { name }]) => `${name} (${id})`)
+          .join(', ');
+          
+        const errorMsg = `Unsupported network. Please switch to one of: ${supportedChains}`;
+        setNetworkError(errorMsg);
+        toast({
+          title: 'Unsupported Network',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      setNetworkError(null);
+      return true;
+    } catch (error) {
+      console.error('Error checking network:', error);
+      const errorMsg = 'Failed to check network. Please try again.';
+      setNetworkError(errorMsg);
+      toast({
+        title: 'Network Error',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
 
   // Initialize WalletConnect provider with better error handling
   const initWalletConnect = useCallback(async () => {
@@ -159,6 +231,9 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         if (walletConnectProvider?.disconnect) {
           await walletConnectProvider.disconnect();
         }
+      } else if (connectedWallet === 'coinbase' && window.ethereum?.isCoinbaseWallet) {
+        // For Coinbase Wallet, clear the provider
+        window.ethereum = undefined;
       }
       
       // Clear state
@@ -166,6 +241,11 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       setConnectedWallet(null);
       setProvider(null);
       setError(null);
+      setNetworkError(null);
+      
+      // Clear stored connection
+      localStorage.removeItem(STORAGE_KEYS.CONNECTED_WALLET);
+      localStorage.removeItem(STORAGE_KEYS.LAST_CONNECTION);
       
       // Logout from the app
       await logout();
@@ -186,7 +266,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   };
 
   // Handle wallet connection with improved error handling and mobile support
-  const connectWallet = async (walletId: WalletOption['id']) => {
+  const connectWallet = async (walletId: WalletOption['id'], isReconnect = false) => {
     try {
       setError(null);
       setIsConnecting(walletId);
@@ -250,21 +330,31 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
           
         case 'coinbase':
           if (isMobileDevice) {
-            // On mobile, try to use WalletLink/Coinbase Wallet app
-            window.open(`https://go.cb-w.com/`, '_blank');
-            throw new Error('Please use Coinbase Wallet app');
+            // On mobile, use WalletConnect for Coinbase Wallet
+            const walletConnectProvider = await initWalletConnect();
+            await walletConnectProvider.enable();
+            web3Provider = new Web3Provider(walletConnectProvider);
+            setProvider(web3Provider);
+            accounts = await web3Provider.listAccounts();
+            
+            if (!accounts || accounts.length === 0) {
+              accounts = await web3Provider.send('eth_requestAccounts', []);
+            }
+          } else {
+            // On desktop, use Coinbase Wallet extension
+            if (!window.ethereum?.isCoinbaseWallet && !window.ethereum?.providers?.find(p => p.isCoinbaseWallet)) {
+              window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+              throw new Error('Please install Coinbase Wallet extension');
+            }
+            
+            // Use Coinbase provider if available, otherwise fallback to window.ethereum
+            const coinbaseProvider = window.ethereum?.providers?.find(p => p.isCoinbaseWallet) || window.ethereum;
+            
+            // Request account access
+            accounts = await coinbaseProvider.request({ method: 'eth_requestAccounts' });
+            web3Provider = new Web3Provider(coinbaseProvider, 'any');
+            setProvider(web3Provider);
           }
-          
-          if (!window.ethereum?.isCoinbaseWallet && !window.ethereum?.providers?.find(p => p.isCoinbaseWallet)) {
-            window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-            throw new Error('Please install Coinbase Wallet extension');
-          }
-          
-          // Use Coinbase provider if available, otherwise fallback to window.ethereum
-          const coinbaseProvider = window.ethereum?.providers?.find(p => p.isCoinbaseWallet) || window.ethereum;
-          web3Provider = new Web3Provider(coinbaseProvider, 'any');
-          setProvider(web3Provider);
-          accounts = await web3Provider.send('eth_requestAccounts', []);
           break;
           
         case 'walletconnect':
@@ -295,27 +385,50 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       }
       
       const address = accounts[0];
+      
+      // Check network before proceeding
+      if (!(await checkNetwork(web3Provider))) {
+        await disconnectWallet();
+        return;
+      }
+      
       setEvmAddress(address);
       setConnectedWallet(walletId);
       
-      // Sign message and authenticate with backend
-      if (!web3Provider) {
-        throw new Error('Provider not initialized');
+      // Save connection to localStorage
+      if (!isReconnect) {
+        localStorage.setItem(STORAGE_KEYS.CONNECTED_WALLET, walletId);
+        localStorage.setItem(STORAGE_KEYS.LAST_CONNECTION, Date.now().toString());
       }
-      const signer = web3Provider.getSigner();
-      const message = `Welcome to FundLoom!\n\nPlease sign this message to verify your wallet.\n\nNonce: ${Date.now()}`;
-      const signature = await signer.signMessage(message);
       
-      // Authenticate with backend
-      await loginWithWallet({
-        address,
-        signature,
-        message,
-        walletType: walletId
-      });
-      
-      // Navigate to dashboard after successful authentication
-      navigate(next, { replace: true });
+      try {
+        // Sign message and authenticate with backend
+        if (!web3Provider) {
+          throw new Error('Provider not initialized');
+        }
+        
+        const signer = web3Provider.getSigner();
+        const message = `Welcome to FundLoom!\n\nPlease sign this message to verify your wallet.\n\nNonce: ${Date.now()}`;
+        const signature = await signer.signMessage(message);
+        
+        // Authenticate with backend
+        await loginWithWallet({
+          address,
+          signature,
+          message,
+          walletType: walletId
+        });
+        
+        // Navigate to dashboard after successful authentication
+        navigate(next, { replace: true });
+      } catch (error) {
+        // If signing fails, clean up the connection
+        if (error instanceof Error && error.message.includes('User denied message signature')) {
+          await disconnectWallet();
+          throw new Error('Signing request was rejected');
+        }
+        throw error;
+      }
       
     } catch (err: any) {
       console.error('Wallet connection error:', err);
@@ -334,29 +447,47 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   useEffect(() => {
     if (!window.ethereum || connectedWallet === 'walletconnect') return;
     
-    const handleAccountsChanged = (accounts: string[]) => {
+    const handleAccountsChanged = async (accounts: string[]) => {
       if (accounts.length === 0) {
         // Wallet disconnected
-        setEvmAddress(null);
-        setConnectedWallet(null);
-        setProvider(null);
+        await disconnectWallet();
       } else if (evmAddress && evmAddress.toLowerCase() !== accounts[0].toLowerCase()) {
         // Account changed
         setEvmAddress(accounts[0]);
-        // You might want to re-authenticate with the new account here
+        
+        // Re-authenticate with the new account
+        if (connectedWallet && provider) {
+          try {
+            const signer = provider.getSigner();
+            const message = `Welcome back to FundLoom!\n\nPlease sign this message to verify your wallet.\n\nNonce: ${Date.now()}`;
+            const signature = await signer.signMessage(message);
+            
+            await loginWithWallet({
+              address: accounts[0],
+              signature,
+              message,
+              walletType: connectedWallet
+            });
+          } catch (error) {
+            console.error('Failed to re-authenticate with new account:', error);
+            await disconnectWallet();
+          }
+        }
       }
     };
     
     const handleChainChanged = (chainId: string) => {
       console.log('Chain changed:', chainId);
-      // You might want to handle chain changes here
+      // Check if the new chain is supported
+      if (provider) {
+        checkNetwork(provider);
+      }
+      // Reload to ensure all contract instances are using the correct chain
       window.location.reload();
     };
     
-    const handleDisconnect = () => {
-      setEvmAddress(null);
-      setConnectedWallet(null);
-      setProvider(null);
+    const handleDisconnect = async () => {
+      await disconnectWallet();
     };
     
     // Set up event listeners
@@ -370,7 +501,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
       window.ethereum?.removeListener('chainChanged', handleChainChanged);
       window.ethereum?.removeListener('disconnect', handleDisconnect);
     };
-  }, [evmAddress, connectedWallet]);
+  }, [evmAddress, connectedWallet, provider]);
 
   // Check for existing WalletConnect session on mount
   useEffect(() => {
@@ -553,11 +684,22 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         ))}
       </div>
 
-      {error && (
+      {(error || networkError) && (
         <div className="p-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-900/30 dark:text-red-300">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5" />
-            <span>{error}</span>
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <div>
+              {error && <p className="font-medium">{error}</p>}
+              {networkError && <p className="mt-1">{networkError}</p>}
+              {networkError && (
+                <button
+                  className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh page after switching networks
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

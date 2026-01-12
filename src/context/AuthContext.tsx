@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { clearAuth as clearAuthStorage } from "@/lib/api";
-import { useAccount } from "@starknet-react/core";
 
 export type AuthUser = {
   id?: string;
@@ -47,8 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  // Wallets
-  const { address: starknetAddress } = useAccount();
+  // Wallet state
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
 
   // Router
@@ -133,15 +131,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const walletConnected = useMemo(() => !!starknetAddress || !!evmAddress, [starknetAddress, evmAddress]);
+  // Check if wallet is connected
+  const walletConnected = useMemo(() => {
+    return !!evmAddress;
+  }, [evmAddress]);
   const hasJwt = !!token;
   const isAuthenticated = walletConnected || hasJwt;
-  const authMethod = ((): "none" | "jwt" | "wallet" | "both" => {
-    if (hasJwt && walletConnected) return "both";
-    if (hasJwt) return "jwt";
-    if (walletConnected) return "wallet";
-    return "none";
-  })();
+
+  // Determine auth method
+  const authMethod = useMemo((): AuthContextType['authMethod'] => {
+    if (token && walletConnected) return 'both';
+    if (token) return 'jwt';
+    if (walletConnected) return 'wallet';
+    return 'none';
+  }, [token, walletConnected]);
 
   // If we have a token but user.id is missing, fetch /auth/me to hydrate
   useEffect(() => {

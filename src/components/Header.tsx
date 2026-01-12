@@ -1,13 +1,10 @@
-// // "use client";
-// import "../global.css";
 import "../App.css";
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom"; // React Router Link
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { ThemeToggle } from "../components/theme-toggle";
 import { Menu, X, Zap, CheckCircle } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
-import { useAccount, useDisconnect } from "@starknet-react/core";
 import { WalletConnectorModal } from "../components/modal/WalletConnector";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,48 +14,36 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith("/dashboard");
   const { activeTab, setActiveTab } = useAppContext();
-  // Address for display only
-  const { address: starknetAddress } = useAccount();
-  const { disconnect: starknetDisconnect } = useDisconnect();
-  const {
-    isAuthenticated: isAuthed,
-    hasJwt,
-    walletConnected,
-    logout,
-  } = useAuth();
+  const { isAuthenticated: isAuthed, logout } = useAuth();
+  
   // Detect EVM wallet (MetaMask) connection
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
+  
   useEffect(() => {
     const eth = (window as any)?.ethereum;
     if (!eth) return;
+    
     const update = async () => {
       try {
-        const accounts: string[] = await eth.request?.({
+        const accounts: string[] = await eth.request({
           method: "eth_accounts",
         });
         setEvmAddress(accounts && accounts.length ? accounts[0] : null);
       } catch {}
     };
+    
     update();
     const handler = (accounts: string[]) =>
       setEvmAddress(accounts && accounts.length ? accounts[0] : null);
+      
     eth.on?.("accountsChanged", handler);
     return () => {
       eth.removeListener?.("accountsChanged", handler);
     };
   }, []);
-  // When user clicks logout or disconnect, call unified logout
+  
   const handleLogout = async () => {
     await logout();
-    setIsMenuOpen(false);
-  };
-  const handleDisconnectWallet = async () => {
-    try {
-      if (starknetAddress) {
-        await starknetDisconnect();
-      }
-    } catch {}
-    // MetaMask/Coinbase cannot be force-disconnected; clear local state only
     setEvmAddress(null);
     setIsMenuOpen(false);
     navigate("/");
@@ -109,79 +94,18 @@ export const Header: React.FC = () => {
           <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
             {isDashboard ? (
               <div className="flex items-center gap-2">
-                {walletConnected && (
-                  <>
-                    <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
-                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="text-sm font-medium text-foreground">
-                        {(starknetAddress || evmAddress)?.slice(0, 6)}...
-                        {(starknetAddress || evmAddress)?.slice(-4)}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDisconnectWallet}
-                    >
-                      Disconnect
-                    </Button>
-                  </>
-                )}
-                {hasJwt && (
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
-                    Logout
-                  </Button>
-                )}
-                {!walletConnected && !hasJwt && !isAuthed && (
-                  <WalletConnectorModal />
-                )}
+                <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-foreground">
+                    {evmAddress?.slice(0, 6)}...{evmAddress?.slice(-4)}
+                  </span>
+                </div>
+                <Button size="sm" onClick={handleLogout}>
+                  Logout
+                </Button>
               </div>
             ) : (
-              <>
-                {hasJwt ? (
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to="/profile">Profile</Link>
-                    </Button>
-                    {walletConnected && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDisconnectWallet}
-                      >
-                        Disconnect
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={handleLogout}>
-                      Logout
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    {walletConnected && (
-                      <></>
-                      // <Button
-                      //   variant="ghost"
-                      //   size="sm"
-                      //   onClick={handleDisconnectWallet}
-                      // >
-                      //   Disconnect
-                      // </Button>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link
-                        to="/auth"
-                        className="text-sm font-medium hover:text-primary transition-colors"
-                      >
-                        Sign In
-                      </Link>
-                    </Button>
-                    <Button size="sm" asChild>
-                      <Link to="/auth?mode=signup">Create Campaign</Link>
-                    </Button>
-                  </>
-                )}
-              </>
+              <WalletConnectorModal />
             )}
           </div>
 
@@ -247,31 +171,15 @@ export const Header: React.FC = () => {
                     )
                   )}
                   <div className="pt-2 grid grid-cols-1 gap-2">
-                    {walletConnected && (
+                    {isAuthed || evmAddress ? (
                       <Button
-                        variant="ghost"
-                        className="w-full"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          handleDisconnectWallet();
-                        }}
-                      >
-                        Disconnect Wallet
-                      </Button>
-                    )}
-                    {hasJwt && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          handleLogout();
-                        }}
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={handleLogout}
                       >
                         Logout
                       </Button>
-                    )}
-                    {!walletConnected && !hasJwt && !isAuthed && (
+                    ) : (
                       <div className="w-full">
                         <WalletConnectorModal />
                       </div>
@@ -302,57 +210,21 @@ export const Header: React.FC = () => {
                     Feature Page
                   </Link>
                   <div className="pt-2 grid grid-cols-2 gap-2">
-                    {hasJwt ? (
-                      <>
-                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
-                          <Link to="/profile">Profile</Link>
-                        </Button>
-                        {walletConnected && (
-                          <Button
-                            variant="ghost"
-                            className="w-full"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              handleDisconnectWallet();
-                            }}
-                          >
-                            Disconnect Wallet
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            handleLogout();
-                          }}
-                        >
-                          Logout
-                        </Button>
-                      </>
+                    {isAuthed || evmAddress ? (
+                      <Button
+                        size="sm"
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          handleLogout();
+                        }}
+                      >
+                        Logout
+                      </Button>
                     ) : (
-                      <>
-                        {walletConnected && (
-                          <Button
-                            variant="ghost"
-                            className="w-full"
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              handleDisconnectWallet();
-                            }}
-                          >
-                            Disconnect Wallet
-                          </Button>
-                        )}
-                        <Button variant="outline" className="w-full" asChild>
-                          <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                            Sign In
-                          </Link>
-                        </Button>
-                        <Button className="w-full" asChild onClick={() => setIsMenuOpen(false)}>
-                          <Link to="/auth?mode=signup">Create</Link>
-                        </Button>
-                      </>
+                      <div className="w-full">
+                        <WalletConnectorModal />
+                      </div>
                     )}
                   </div>
                 </>
