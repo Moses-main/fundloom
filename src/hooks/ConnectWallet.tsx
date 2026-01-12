@@ -51,49 +51,6 @@ export interface Donation {
   donor_message: string;
 }
 
-// Mock Data
-export const mockCampaigns: Campaign[] = [
-  {
-    id: 1,
-    charity_address: "0x123...abc",
-    title: "Clean Water for Rural Communities",
-    description:
-      "Providing clean water access to 5,000 people in rural areas through well construction and water purification systems.",
-    target_amount: 50000,
-    raised_amount: 32500,
-    deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
-    is_active: true,
-    created_at: Date.now() - 7 * 24 * 60 * 60 * 1000,
-    total_donors: 127,
-  },
-  {
-    id: 2,
-    charity_address: "0x456...def",
-    title: "Education for Underprivileged Children",
-    description:
-      "Supporting education by providing school supplies, uniforms, and scholarships for 200 children.",
-    target_amount: 25000,
-    raised_amount: 18750,
-    deadline: Date.now() + 45 * 24 * 60 * 60 * 1000,
-    is_active: true,
-    created_at: Date.now() - 14 * 24 * 60 * 60 * 1000,
-    total_donors: 89,
-  },
-  {
-    id: 3,
-    charity_address: "0x789...ghi",
-    title: "Emergency Medical Supplies",
-    description:
-      "Urgent funding needed for medical supplies and equipment for local healthcare centers.",
-    target_amount: 15000,
-    raised_amount: 14200,
-    deadline: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    is_active: true,
-    created_at: Date.now() - 3 * 24 * 60 * 60 * 1000,
-    total_donors: 156,
-  },
-];
-
 export const mockDonations: Donation[] = [
   {
     id: 1,

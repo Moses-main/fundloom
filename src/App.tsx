@@ -1,151 +1,142 @@
-// App.tsx
-
-import "./App";
-
-import React, { useState } from "react";
-import { Campaign, Donation } from "./types";
+import React, { Suspense, lazy } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "./components/theme-provider";
 import { Header } from "./components/Header";
-import { CampaignCard } from "./components/CampaignCard";
-import { DonationModal } from "./components/DonationModal";
-import { UserProfile } from "./components/UserProfile";
+const HomePage = lazy(() => import("./pages/Home"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallback"));
+import { AppProvider } from "./context/AppContext";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/routing/ProtectedRoute";
+// import CampaignsPage from "./pages/CampaignsPage";
+const MyCampaignsPage = lazy(() => import("./pages/MyCampaignsPage"));
+const MyDonationsPage = lazy(() => import("./pages/MyDonationsPage"));
+// import CreateCampaignPage from "./pages/CreateCampaignPage";
+const ForgotWalletPage = lazy(() => import("./pages/ForgotWallet"));
+// import DashboardPage from "./pages/Dashboard";
 
-// 🆕 ADD THESE for wallet management
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  Connector,
-} from "@starknet-react/core";
-import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const CampaignsPage = lazy(() => import("./pages/CampaignsPage"));
+import { ToastProvider } from "./components/ui/ToastProvider";
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const CampaignDonorsPage = lazy(() => import("./pages/CampaignDonorsPage"));
+const CampaignReportPage = lazy(() => import("./pages/CampaignReportPage"));
+const CampaignDiscussionPage = lazy(
+  () => import("./pages/CampaignDiscussionPage")
+);
+const SharedCampaignPage = lazy(() => import("./pages/SharedCampaignPage"));
+const ThankYouPage = lazy(() => import("./pages/ThankYouPage"));
+import { LoadingProvider } from "./context/LoadingContext";
+import LoadingOverlay from "./components/ui/LoadingOverlay";
 
-// Mock data
-const initialCampaigns: Campaign[] = [
-  {
-    id: 1,
-    charity_address: "0x123...",
-    title: "Clean Water for Rural Communities",
-    description:
-      "Providing clean drinking water access to remote villages in Nigeria",
-    target_amount: 50000,
-    raised_amount: 32500,
-    deadline: Date.now() + 30 * 24 * 60 * 60 * 1000,
-    is_active: true,
-    created_at: Date.now() - 10 * 24 * 60 * 60 * 1000,
-    total_donors: 127,
-  },
-  // Add more mock campaigns as needed
-];
+// testing with the entire application
+// import Entire from "./entireApp";
 
-const initialDonations: Donation[] = [];
-
-const App: React.FC = () => {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
-  const [donations, setDonations] = useState<Donation[]>(initialDonations);
-  const [activeTab, setActiveTab] = useState("campaigns");
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    null
-  );
-  const [donationAmount, setDonationAmount] = useState("");
-  const [donationMessage, setDonationMessage] = useState("");
-  const [showModal, setShowModal] = useState(false);
-
-  // =========================
-  const { address } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { connect, connectors } = useConnect();
-  const { starknetkitConnectModal } = useStarknetkitConnectModal({
-    connectors: connectors as StarknetkitConnector[],
-  });
-
-  const walletConnected = !!address;
-  const userAddress = address || "";
-
-  const connectWallet = async () => {
-    const { connector } = await starknetkitConnectModal();
-    if (!connector) return;
-    await connect({ connector: connector as Connector });
-  };
-
-  const handleDonate = () => {
-    if (!selectedCampaign || !donationAmount) return;
-
-    const donation: Donation = {
-      id: donations.length + 1,
-      donor_address: userAddress,
-      campaign_id: selectedCampaign.id,
-      amount: parseFloat(donationAmount) * 1000,
-      timestamp: Date.now(),
-      donor_message: donationMessage,
-    };
-
-    const updatedCampaigns = campaigns.map((c) =>
-      c.id === selectedCampaign.id
-        ? {
-            ...c,
-            raised_amount: c.raised_amount + donation.amount,
-            total_donors: c.total_donors + 1,
-          }
-        : c
-    );
-
-    setDonations([...donations, donation]);
-    setCampaigns(updatedCampaigns);
-    setDonationAmount("");
-    setDonationMessage("");
-    setSelectedCampaign(null);
-    setShowModal(false);
-  };
-
+function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        walletConnected={walletConnected}
-        userAddress={userAddress}
-        connectWallet={connectWallet}
-        disconnectWallet={disconnect}
-      />
+    <ThemeProvider defaultTheme="system" storageKey="Fundloom-theme">
+      <ToastProvider>
+          <LoadingProvider>
+            <AuthProvider>
+              <AppProvider>
+                <div className="min-h-screen bg-background">
+                  <Header />
+                  <Suspense fallback={<LoadingOverlay />}>
+                    <Routes>
+                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/auth" element={<AuthPage />} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === "campaigns" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {campaigns.map((campaign) => (
-              <CampaignCard
-                key={campaign.id}
-                campaign={campaign}
-                walletConnected={walletConnected}
-                onDonateClick={() => {
-                  setSelectedCampaign(campaign);
-                  setShowModal(true);
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {activeTab === "profile" && walletConnected && (
-          <UserProfile
-            donations={donations}
-            campaigns={campaigns}
-            userAddress={userAddress}
-          />
-        )}
-      </main>
-
-      {showModal && selectedCampaign && (
-        <DonationModal
-          selectedCampaign={selectedCampaign}
-          donationAmount={donationAmount}
-          setDonationAmount={setDonationAmount}
-          donationMessage={donationMessage}
-          setDonationMessage={setDonationMessage}
-          onClose={() => setShowModal(false)}
-          onConfirm={handleDonate}
-        />
-      )}
-    </div>
+                      <Route
+                        path="/shared-campaign/:id"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route
+                        path="/auth/callback"
+                        element={<OAuthCallbackPage />}
+                      />
+                      <Route 
+                        path="/campaigns" 
+                        element={
+                          <ProtectedRoute>
+                            <CampaignsPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      {/* <Route path="/campaigns/create" element={<CreateCampaignPage />} /> */}
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <DashboardPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-campaigns"
+                        element={
+                          <ProtectedRoute>
+                            <MyCampaignsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-donations"
+                        element={
+                          <ProtectedRoute>
+                            <MyDonationsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/campaigns/shared/:id"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route
+                        path="/campaigns/:id"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route path="/thank-you" element={<ThankYouPage />} />
+                      <Route
+                        path="/campaigns/:id/donors"
+                        element={
+                          <ProtectedRoute>
+                            <CampaignDonorsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/campaigns/:id/report"
+                        element={<CampaignReportPage />}
+                      />
+                      <Route
+                        path="/campaigns/:id/discussion"
+                        element={<CampaignDiscussionPage />}
+                      />
+                      <Route
+                        path="/campaign/:campaignId"
+                        element={<SharedCampaignPage />}
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <Navigate to="/dashboard?tab=profile" replace />
+                        }
+                      />
+                      <Route
+                        path="/forgot-wallet"
+                        element={<ForgotWalletPage />}
+                      />
+                    </Routes>
+                  </Suspense>
+                  <LoadingOverlay />
+                </div>
+              </AppProvider>
+            </AuthProvider>
+          </LoadingProvider>
+        </ToastProvider>
+    </ThemeProvider>
   );
-};
+}
 
 export default App;

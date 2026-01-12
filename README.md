@@ -1,337 +1,186 @@
-# Charity Donation Platform
+# FundLoom Frontend (Vite + React)
 
-A decentralized charity donation platform built on StarkNet that enables transparent, secure, and efficient charitable giving. This smart contract facilitates trustless donations between donors and verified charitable organizations.
+A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming. The current frontend uses localStorage as its data source but is designed to work with a REST backend.
 
 ## 🌟 Features
 
-### Core Functionality
-- **Charity Registration**: Organizations can register and get verified on the platform
-- **Campaign Management**: Charities can create time-bound fundraising campaigns
-- **Secure Donations**: Donors can contribute to campaigns with transparent tracking
-- **Fund Withdrawal**: Verified charities can withdraw raised funds with purpose documentation
-- **Platform Fees**: Configurable platform fees to sustain the ecosystem
+- **Campaign Browsing**: Grid/list of campaigns with stats, progress bars, days left, and templates.
+- **Campaign Details**: View description, funds usage breakdown, donor list, and comments.
+- **Donations**: Donation modal with amount, message, and payment method selection (crypto/card/bank/mobile).
+- **Create Campaign**: Modal to create a new campaign with title, description, target, category, template, and optional image.
+- **Comments**: Add comments on campaigns and view existing discussion.
+- **Leaderboard**: Aggregated donor totals and counts.
+- **Wallet Mock**: Simulated wallet connect/disconnect for demo UX.
+- **Deep-links**: Auto-open donation modal via `?campaign=<id>` query param.
+- **Responsive UI**: Built with modern UI components and Tailwind CSS.
 
-### Security & Administration
-- **Admin Controls**: Comprehensive admin functions for platform management
-- **Pause Mechanism**: Emergency pause functionality for security
-- **Verification System**: Admin-verified charity status for trust
-- **Transparent Tracking**: All donations and withdrawals are publicly recorded
+## 🧰 Tech Stack
 
-## 🏗️ Architecture
+- React 19 + TypeScript
+- Vite 7
+- Tailwind CSS 4
+- React Router DOM 7
+- Radix UI primitives
 
-### Smart Contract Structure
+See `package.json` for full dependency list.
+
+## 🗂️ Project Structure
 
 ```
-CharityDonationContract
-├── Storage
-│   ├── Charities mapping
-│   ├── Campaigns mapping
-│   ├── Donations mapping
-│   └── Withdrawals mapping
-├── Events
-│   ├── CharityRegistered
-│   ├── CampaignCreated
-│   ├── DonationMade
-│   └── FundsWithdrawn
-└── Functions
-    ├── Charity Management
-    ├── Campaign Operations
-    ├── Donation Processing
-    └── Admin Controls
+frontend/
+└── src/
+    ├── App.tsx, entireApp.tsx         # App shells and alternate layout
+    ├── components/                    # UI components and modals
+    ├── pages/                         # Views (Dashboard, Auth, etc.)
+    ├── context/AppContext.tsx         # Global state (campaigns, donations, comments)
+    ├── styles/, assets/, utils/       # Styling, assets, helpers
+    ├── main.tsx, layout.tsx           # Vite/React bootstrap
+    └── global.css, index.css          # Global styles
 ```
 
-### Key Data Structures
+## 🔢 Data Model (Frontend)
 
-#### Charity
-```rust
-struct Charity {
-    name: ByteArray,
-    description: ByteArray,
-    wallet_address: ContractAddress,
-    is_verified: bool,
-    total_raised: u256,
-    campaigns_count: u256,
-    registration_date: u64,
+Types used across the UI (see `src/context/AppContext.tsx`):
+
+```ts
+type PaymentMethod = 'crypto' | 'card' | 'bank' | 'mobile';
+
+interface Campaign {
+  id: number;
+  charity_address: string;
+  title: string;
+  description: string;
+  target_amount: number;
+  raised_amount: number;
+  deadline: number; // epoch ms
+  is_active: boolean;
+  created_at: number; // epoch ms
+  total_donors: number;
+  image?: string | null;
+  category?: string;
+  template?: 'default' | 'impact' | 'medical' | 'creative';
+  funds_used?: Record<string, number>;
+}
+
+interface Donation {
+  id: number;
+  donor_address: string;
+  donor_name?: string;
+  campaign_id: number;
+  amount: number;
+  timestamp: number; // epoch ms
+  donor_message: string;
+  payment_method: PaymentMethod;
+}
+
+interface Comment {
+  id: number;
+  campaign_id: number;
+  author: string;
+  message: string;
+  timestamp: number; // epoch ms
 }
 ```
 
-#### Campaign
-```rust
-struct Campaign {
-    id: u256,
-    charity_address: ContractAddress,
-    title: ByteArray,
-    description: ByteArray,
-    target_amount: u256,
-    raised_amount: u256,
-    deadline: u64,
-    is_active: bool,
-    created_at: u64,
-    total_donors: u256,
-}
-```
+Note: In production, IDs will be strings (MongoDB ObjectIds). The UI handles numeric IDs today due to localStorage seed data.
 
-#### Donation
-```rust
-struct Donation {
-    id: u256,
-    donor_address: ContractAddress,
-    campaign_id: u256,
-    amount: u256,
-    timestamp: u64,
-    donor_message: ByteArray,
-}
-```
+## 💾 State Management & Persistence
 
-## 🚀 Getting Started
+- Global state is managed in `src/context/AppContext.tsx`.
+- Seed data arrays are loaded on first run and then persisted to `localStorage` under keys:
+  - `cc_campaigns_v1`
+  - `cc_donations_v1`
+  - `cc_comments_v1`
+
+## 🔀 Routing & Deep Links
+
+- Main navigation tabs: campaigns, donate, charity, profile.
+- If the URL contains `?campaign=<id>`, the Donation modal auto-opens on mount.
+
+## 🧪 UX Flows
+
+- Create Campaign: Opens modal, preview image, basic client-side validation, stores to localStorage.
+- Donate: Opens modal, capture amount/message/method, simulates processing for non-crypto, updates state + shows thank-you.
+- Comment: Adds a comment to the selected campaign and persists to localStorage.
+
+## 🔗 Intended Backend API Contract
+
+When connected to a backend, the UI expects REST endpoints to support these flows. Base URL example: `http://localhost:5000/api/v1`.
+
+### Auth
+- POST `/auth/register`
+- POST `/auth/login`
+- GET `/auth/me`
+- POST `/auth/logout`
+- POST `/auth/forgot-password`
+- POST `/auth/reset-password`
+- POST `/auth/connect-wallet`
+- POST `/auth/disconnect-wallet`
+
+### Campaigns
+- GET `/campaigns` — list with filters and pagination
+- GET `/campaigns/:id`
+- POST `/campaigns` — create (auth required)
+- PUT `/campaigns/:id` — update (creator only)
+- DELETE `/campaigns/:id` — delete (creator only)
+- GET `/campaigns/user/:userId` — campaigns by user
+- POST `/campaigns/:id/updates` — add update (creator)
+- GET `/campaigns/stats/overview`
+
+### Donations
+- POST `/donations` — create (auth required)
+- GET `/donations/campaign/:campaignId`
+- GET `/donations/my-donations` — current user
+- GET `/donations/:id`
+- GET `/donations/stats/overview`
+- GET `/donations/leaderboard`
+
+### Comments
+- GET `/comments/campaign/:campaignId`
+- POST `/comments/campaign/:campaignId` — create (auth required)
+- PUT `/comments/:id` — update (author)
+- DELETE `/comments/:id` — delete (author)
+- POST `/comments/:id/like` — like/unlike
+- POST `/comments/:id/report` — report
+- GET `/comments/my-comments`
+
+### Users
+- GET `/users/:id`
+- PUT `/users/profile`
+- POST `/users/avatar`
+- GET `/users/dashboard`
+- GET `/users` — admin
+- PUT `/users/:id/role` — admin
+- PUT `/users/:id/verify` — admin
+- DELETE `/users/account`
+
+## 🛠️ Development
 
 ### Prerequisites
-- StarkNet development environment
-- Cairo compiler
-- OpenZeppelin Cairo contracts
-- ETH token contract for donations
+- Node.js 18+
 
-### Installation
+### Install & Run
 
-1. **Clone the repository**
 ```bash
-git clone https://github.com/Moses-main/chari_block_app-.git
-cd chari_block_app-
+cd frontend
+npm install
+npm run dev
 ```
 
-2. **Install dependencies**
-```bash
-scarb build
-```
+The dev server runs on Vite’s default port (usually 5173).
 
-3. **Deploy to StarkNet**
-```bash
-starknet deploy --contract charity_donation_contract.json
-```
+## 🎨 Theming
 
-### Constructor Parameters
+- Theme provider and Radix UI used across components.
+- Tailwind CSS for utility-first styling.
 
-When deploying the contract, you need to provide:
+## ✅ Roadmap
 
-- `admin`: Address of the platform administrator
-- `eth_token_address`: Address of the ETH token contract
-- `platform_treasury`: Address where platform fees are collected
-- `initial_platform_fee`: Initial fee in basis points (100 = 1%)
-
-## 📖 Usage Guide
-
-### For Charities
-
-#### 1. Register Your Charity
-```rust
-// Call register_charity function
-register_charity(
-    name: "Your Charity Name",
-    description: "Description of your charitable work"
-)
-```
-
-#### 2. Get Verified
-Contact the platform admin to verify your charity status.
-
-#### 3. Create Campaigns
-```rust
-// Create a new fundraising campaign
-create_campaign(
-    title: "Campaign Title",
-    description: "Campaign description",
-    target_amount: 1000000000000000000, // 1 ETH in wei
-    duration_days: 30
-)
-```
-
-#### 4. Withdraw Funds
-```rust
-// Withdraw raised funds
-withdraw_funds(
-    campaign_id: 1,
-    amount: 500000000000000000, // 0.5 ETH
-    purpose: "Medical supplies purchase"
-)
-```
-
-### For Donors
-
-#### 1. Find Active Campaigns
-```rust
-// Get list of active campaigns
-let active_campaigns = get_active_campaigns();
-```
-
-#### 2. Make a Donation
-```rust
-// Donate to a campaign
-donate_to_campaign(
-    campaign_id: 1,
-    amount: 100000000000000000, // 0.1 ETH
-    donor_message: "Keep up the great work!"
-)
-```
-
-### For Administrators
-
-#### 1. Verify Charities
-```rust
-// Verify a registered charity
-verify_charity(charity_address: 0x123...)
-```
-
-#### 2. Platform Management
-```rust
-// Update platform fee
-update_platform_fee(new_fee: 200) // 2%
-
-// Pause/unpause contract
-pause_contract()
-unpause_contract()
-```
-
-## 🔧 API Reference
-
-### Charity Functions
-
-| Function | Description | Parameters |
-|----------|-------------|------------|
-| `register_charity` | Register a new charity | `name`, `description` |
-| `verify_charity` | Verify a charity (admin only) | `charity_address` |
-| `get_charity` | Get charity details | `charity_address` |
-
-### Campaign Functions
-
-| Function | Description | Parameters |
-|----------|-------------|------------|
-| `create_campaign` | Create a new campaign | `title`, `description`, `target_amount`, `duration_days` |
-| `end_campaign` | End a campaign | `campaign_id` |
-| `get_campaign` | Get campaign details | `campaign_id` |
-| `get_active_campaigns` | Get all active campaigns | None |
-
-### Donation Functions
-
-| Function | Description | Parameters |
-|----------|-------------|------------|
-| `donate_to_campaign` | Make a donation | `campaign_id`, `amount`, `donor_message` |
-| `withdraw_funds` | Withdraw funds (charity only) | `campaign_id`, `amount`, `purpose` |
-| `get_donation` | Get donation details | `donation_id` |
-
-### View Functions
-
-| Function | Description | Returns |
-|----------|-------------|---------|
-| `get_total_campaigns` | Total number of campaigns | `u256` |
-| `get_total_donations` | Total number of donations | `u256` |
-| `is_contract_paused` | Check if contract is paused | `bool` |
-| `get_platform_fee` | Get current platform fee | `u256` |
-
-## 📊 Events
-
-The contract emits the following events for tracking and indexing:
-
-- `CharityRegistered`: When a charity registers
-- `CharityVerified`: When a charity gets verified
-- `CampaignCreated`: When a new campaign is created
-- `CampaignEnded`: When a campaign ends
-- `DonationMade`: When a donation is made
-- `FundsWithdrawn`: When funds are withdrawn
-- `ContractPaused/Unpaused`: When contract status changes
-- `PlatformFeeUpdated`: When platform fee is updated
-
-## 🛡️ Security Features
-
-### Access Control
-- **Admin-only functions**: Charity verification, contract management
-- **Charity-only functions**: Fund withdrawal, campaign management
-- **Public functions**: Donations, viewing data
-
-### Safety Mechanisms
-- **Pause functionality**: Emergency stop for security incidents
-- **Verification requirement**: Only verified charities can create campaigns
-- **Time-based controls**: Campaign deadlines and duration limits
-- **Amount validations**: Minimum donation amounts and withdrawal limits
-
-### Transparency
-- **Public audit trail**: All transactions are recorded on-chain
-- **Event emissions**: Real-time tracking of all platform activities
-- **Open data**: Campaign and donation data is publicly accessible
-
-## 💰 Fee Structure
-
-The platform operates on a fee-based model:
-- **Platform Fee**: Configurable percentage (default: 1-10%)
-- **Fee Distribution**: Collected fees go to platform treasury
-- **Fee Transparency**: All fees are clearly communicated and tracked
-
-## 🔒 Security Considerations
-
-### Best Practices
-1. **Verify charity legitimacy** before donating
-2. **Check campaign deadlines** and targets
-3. **Monitor withdrawal activities** for transparency
-4. **Keep private keys secure** for all transactions
-
-### Known Limitations
-- Platform relies on admin verification for charity trust
-- Campaign success depends on reaching target amounts
-- Platform fees reduce the amount received by charities
-- Smart contract risks inherent to blockchain technology
-
-## 🤝 Contributing
-
-We welcome contributions to improve the platform:
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Add comprehensive tests
-5. Submit a pull request
-
-### Development Guidelines
-- Follow Cairo coding standards
-- Write comprehensive tests
-- Document new features
-- Ensure backward compatibility
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue on GitHub
-- Join our community Discord
-- Contact the development team
-
-## 🗺️ Roadmap
-
-### Phase 1 (Current)
-- [x] Basic charity registration and verification
-- [x] Campaign creation and management
-- [x] Donation processing
-- [x] Fund withdrawal system
-
-### Phase 2 (Planned)
-- [ ] Multi-token support (beyond ETH)
-- [ ] Reputation system for charities
-- [ ] Milestone-based fund release
-- [ ] Integration with external verification services
-
-### Phase 3 (Future)
-- [ ] Mobile application
-- [ ] Advanced analytics dashboard
-- [ ] Community governance features
-- [ ] Cross-chain compatibility
-
-## 🔗 Links
-
-- [StarkNet Documentation](https://docs.starknet.io/)
-- [Cairo Language](https://cairo-lang.org/)
-- [OpenZeppelin Cairo](https://github.com/OpenZeppelin/cairo-contracts)
+- Replace localStorage with real API calls.
+- Add API service layer with fetch/axios.
+- Hook wallet connect to backend `/auth/connect-wallet`.
+- File uploads for campaign images and user avatars.
 
 ---
 
-**Built with ❤️ for charitable giving on StarkNet**
+Built with ❤️ using React, Vite, and Tailwind.

@@ -1,46 +1,149 @@
-// components/DonationModal.tsx
+// src/components/DonationModal.tsx
+import React, { useMemo, useState } from "react";
+import { useAppContext } from "../context/AppContext";
+import {
+  Wallet,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  CheckCircle,
+} from "lucide-react";
+import { useToast } from "@/components/ui/ToastProvider";
+import {
+  donateEth as contractDonateEth,
+  donateErc20,
+  ensureAllowance,
+  getSelectedAddress,
+  getTokenMeta,
+  requireChain,
+  signDonationMessage,
+} from "@/lib/evm";
+import {
+  EVM_CHAIN_ID_HEX,
+  EVM_CONTRACT_ADDRESS,
+  EVM_USDC_ADDRESS,
+  EVM_USDT_ADDRESS,
+} from "@/utils/constant";
+import { postAuthDonation, postGuestDonation } from "@/lib/api";
 
-import React from "react";
-import { Campaign } from "../types";
-import { formatAmount, getProgressPercentage } from "../utils/formatters";
+const PaymentMethodSelector: React.FC = () => {
+  const { selectedPayment, setSelectedPayment } = useAppContext();
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        onClick={() => setSelectedPayment("crypto")}
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
+          selectedPayment === "crypto"
+            ? "bg-blue-50 border-blue-200"
+            : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <Wallet className="h-4 w-4" />
+          <span className="text-sm">Crypto</span>
+        </div>
+      </button>
+      <button
+        onClick={() => setSelectedPayment("card")}
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
+          selectedPayment === "card"
+            ? "bg-blue-50 border-blue-200"
+            : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <CreditCard className="h-4 w-4" />
+          <span className="text-sm">Card</span>
+        </div>
+      </button>
+      <button
+        onClick={() => setSelectedPayment("bank")}
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
+          selectedPayment === "bank"
+            ? "bg-blue-50 border-blue-200"
+            : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <Banknote className="h-4 w-4" />
+          <span className="text-sm">Bank</span>
+        </div>
+      </button>
+      <button
+        onClick={() => setSelectedPayment("mobile")}
+        className={`px-3 py-3 rounded-xl border min-w-[calc(50%-0.25rem)] sm:min-w-[110px] flex-1 sm:flex-none ${
+          selectedPayment === "mobile"
+            ? "bg-blue-50 border-blue-200"
+            : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <Smartphone className="h-4 w-4" />
+          <span className="text-sm">Mobile</span>
+        </div>
+      </button>
+    </div>
+  );
+};
 
-interface Props {
-  selectedCampaign: Campaign;
-  donationAmount: string;
-  setDonationAmount: (val: string) => void;
-  donationMessage: string;
-  setDonationMessage: (val: string) => void;
-  onClose: () => void;
-  onConfirm: () => void;
-}
+const DonationModal: React.FC = () => {
+  const {
+    selectedCampaign,
+    setShowDonationModal,
+    setSelectedCampaign,
+    getProgressPercentage,
+    formatAmount,
+    donationAmount,
+    setDonationAmount,
+    donationMessage,
+    setDonationMessage,
+    selectedPayment,
+    setSelectedPayment,
+    walletConnected,
+    userName,
+    setUserName,
+  } = useAppContext();
 
-export const DonationModal: React.FC<Props> = ({
-  selectedCampaign,
-  donationAmount,
-  setDonationAmount,
-  donationMessage,
-  setDonationMessage,
-  onClose,
-  onConfirm,
-}) => {
+  const [donorEmail, setDonorEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [token, setToken] = useState<"ETH" | "USDC" | "USDT">("ETH");
+  const tokenAddress = useMemo(() => {
+    if (token === "USDC") return EVM_USDC_ADDRESS;
+    if (token === "USDT") return EVM_USDT_ADDRESS;
+    return "0x0000000000000000000000000000000000000000"; // ETH sentinel
+  }, [token]);
+  const backendId =
+    (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
+  const { show: toast } = useToast();
+
+  if (!selectedCampaign) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-gray-900">Make a Donation</h3>
           <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl"
+            onClick={() => {
+              setShowDonationModal(false);
+              setSelectedCampaign(null);
+              if (window.history && window.history.replaceState) {
+                const cleanUrl =
+                  window.location.origin + window.location.pathname;
+                window.history.replaceState({}, "", cleanUrl);
+              }
+            }}
+            className="text-gray-400 hover:text-gray-600 w-9 h-9 -mr-1 flex items-center justify-center rounded-full hover:bg-gray-100"
           >
             ×
           </button>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <h4 className="font-semibold text-gray-900 mb-2">
             {selectedCampaign.title}
           </h4>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
             <div
               className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
               style={{
@@ -51,8 +154,8 @@ export const DonationModal: React.FC<Props> = ({
               }}
             ></div>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
-            {formatAmount(selectedCampaign.raised_amount)} of{" "}
+          <p className="text-sm text-gray-600">
+            ${formatAmount(selectedCampaign.raised_amount)} of $
             {formatAmount(selectedCampaign.target_amount)} raised
           </p>
         </div>
@@ -60,15 +163,71 @@ export const DonationModal: React.FC<Props> = ({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Donation Amount (₦)
+              Your name (optional)
+            </label>
+            <input
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+              placeholder="How should we address you?"
+            />
+          </div>
+
+          {selectedPayment === "card" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email (required for card payments)
+              </label>
+              <input
+                type="email"
+                value={donorEmail}
+                onChange={(e) => setDonorEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                placeholder="you@example.com"
+                required
+              />
+              {!backendId && (
+                <p className="text-xs text-red-600 mt-2">
+                  This campaign isn\'t synced with the server yet. Please
+                  create/select a server-backed campaign to use card payments.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {selectedPayment === "crypto" ? "Amount" : "Donation Amount ($)"}
             </label>
             <input
               type="number"
               value={donationAmount}
               onChange={(e) => setDonationAmount(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter amount"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+              placeholder={
+                selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"
+              }
             />
+            {selectedPayment === "crypto" && (
+              <div className="mt-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Token
+                </label>
+                <select
+                  value={token}
+                  onChange={(e) => setToken(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="ETH">ETH</option>
+                  <option value="USDC">USDC</option>
+                  <option value="USDT">USDT</option>
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  You will sign a message before the transaction for donation
+                  intent.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
@@ -78,21 +237,189 @@ export const DonationModal: React.FC<Props> = ({
             <textarea
               value={donationMessage}
               onChange={(e) => setDonationMessage(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl"
               placeholder="Leave a message of support..."
             />
           </div>
 
-          <button
-            onClick={onConfirm}
-            disabled={!donationAmount}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-          >
-            Confirm Donation
-          </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Payment Method
+            </label>
+            <PaymentMethodSelector />
+            <p className="text-xs text-gray-500 mt-2">
+              Crypto uses your browser wallet (MetaMask or compatible).
+              Card/bank/mobile are simulated for demo purposes.
+            </p>
+          </div>
+
+          <ActionButton
+            submitting={submitting}
+            disabled={
+              !donationAmount ||
+              (selectedPayment === "card" && (!donorEmail || !backendId))
+            }
+            onClick={async () => {
+              const amountNum = parseFloat(donationAmount || "0");
+              if (!selectedCampaign || !amountNum || amountNum <= 0) return;
+              if (selectedPayment === "card") {
+                // Initialize Paystack and redirect
+                try {
+                  setSubmitting(true);
+                  if (!backendId) {
+                    setSubmitting(false);
+                    return;
+                  }
+                  const { initPaystackCard } = await import("../lib/api");
+                  const resp = await initPaystackCard({
+                    campaignId: String(backendId),
+                    amount: amountNum,
+                    email: donorEmail.trim(),
+                    donorName: userName || undefined,
+                    isAnonymous: !userName,
+                    message: donationMessage || undefined,
+                    // Optionally set a callback URL; leaving undefined relies on webhook-only confirmation
+                  });
+                  if (resp?.success && (resp.data as any)?.authorizationUrl) {
+                    window.location.href = (resp.data as any).authorizationUrl;
+                  } else {
+                    throw new Error(
+                      resp?.message || "Failed to initialize Paystack"
+                    );
+                  }
+                } catch (e: any) {
+                  toast({
+                    type: "error",
+                    title: "Payment init failed",
+                    description: e?.message || "Failed to start card payment.",
+                  });
+                } finally {
+                  setSubmitting(false);
+                }
+              } else {
+                // Crypto flow: sign message then send on-chain via contract (ETH or ERC20)
+                try {
+                  setSubmitting(true);
+                  // Ensure EVM chain
+                  await requireChain(EVM_CHAIN_ID_HEX);
+                  const from = await getSelectedAddress();
+                  if (!from) throw new Error("Connect MetaMask first.");
+
+                  // Sign intent
+                  const signMsg = `I am donating ${donationAmount} ${token} to campaign: ${selectedCampaign.title}`;
+                  await signDonationMessage(signMsg);
+
+                  // Validate contract address
+                  const contractAddress = EVM_CONTRACT_ADDRESS;
+                  if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+                    throw new Error("EVM contract address not configured.");
+                  }
+
+                  // Determine on-chain campaign ID (must be numeric, e.g. 1,2,3)
+                  // Prefer the synced backend on-chain linkage at `evm.campaignId`
+                  const rawId =
+                    (selectedCampaign as any).evm?.campaignId ??
+                    (selectedCampaign as any).campaignId ??
+                    null;
+                  const idStr = rawId != null ? String(rawId) : "";
+                  if (!/^\d+$/.test(idStr)) {
+                    throw new Error(
+                      "This campaign is missing a numeric on-chain ID. Please sync it with the backend before donating."
+                    );
+                  }
+
+                  let txHash: string = "";
+                  if (token === "ETH") {
+                    // Native ETH donation
+                    txHash = await contractDonateEth({
+                      contractAddress,
+                      campaignId: idStr,
+                      valueEth: String(donationAmount),
+                    });
+                  } else {
+                    // ERC20 donation path
+                    if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress)) {
+                      throw new Error("Token address not configured.");
+                    }
+                    const { decimals } = await getTokenMeta(tokenAddress);
+                    // parse decimal amount to raw units
+                    const parts = String(donationAmount).split(".");
+                    const whole = parts[0] || "0";
+                    const frac = (parts[1] || "").padEnd(decimals, "0").slice(0, decimals);
+                    const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac || "0");
+
+                    await ensureAllowance(tokenAddress, from, contractAddress, raw);
+                    txHash = await donateErc20({
+                      contractAddress,
+                      campaignId: idStr,
+                      tokenAddress,
+                      amount: raw,
+                    });
+                  }
+
+                  // Record on backend if available
+                  if (backendId) {
+                    const tokenStr = localStorage.getItem("auth_token");
+                    const base = {
+                      campaignId: String(backendId),
+                      amount: amountNum,
+                      paymentMethod: "crypto" as const,
+                      message:
+                        (donationMessage ? donationMessage + " " : "") +
+                        `(tx: ${txHash.slice(0, 10)}..., ${token})`,
+                      isAnonymous: !userName,
+                    };
+                    if (tokenStr) {
+                      await postAuthDonation(base as any, tokenStr);
+                    } else {
+                      await postGuestDonation({
+                        ...base,
+                        donorName: userName || undefined,
+                      } as any);
+                    }
+                  }
+
+                  toast({
+                    type: "success",
+                    title: "Donation sent",
+                    description: `Tx: ${txHash.slice(0, 10)}...`,
+                  });
+                  // Close modal and reset
+                  setShowDonationModal(false);
+                  setSelectedCampaign(null);
+                } catch (e: any) {
+                  toast({
+                    type: "error",
+                    title: "Donation failed",
+                    description: e?.message || "Please try again.",
+                  });
+                } finally {
+                  setSubmitting(false);
+                }
+              }
+            }}
+          />
         </div>
       </div>
     </div>
+  );
+};
+
+export default DonationModal;
+
+const ActionButton: React.FC<{
+  submitting?: boolean;
+  disabled?: boolean;
+  onClick: () => void | Promise<void>;
+}> = ({ submitting, disabled, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || submitting}
+      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+    >
+      {submitting ? "Redirecting..." : "Confirm Donation"}
+    </button>
   );
 };

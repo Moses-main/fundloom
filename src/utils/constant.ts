@@ -1,5 +1,6 @@
 // ===============================
-// src/utils/constants.ts
+// src/utils/constant.ts
+// Active EVM network defaults to Base Sepolia. Override via Vite env.
 // ===============================
 
 export const CONTRACT_ADDRESS =
@@ -22,3 +23,30 @@ export const DONATION_AMOUNTS = [
   { label: "0.5 ETH", value: "500000000000000000" },
   { label: "1 ETH", value: "1000000000000000000" },
 ];
+
+// Optional EVM config for MetaMask + Ethereum Sepolia. Override via Vite env at build time.
+export const EVM_CONTRACT_ADDRESS =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env?.VITE_EVM_CONTRACT_ADDRESS) ||
+  "0x0000000000000000000000000000000000000000"; // TODO: set actual EVM contract address (Base Sepolia)
+
+// Base Sepolia chainId in hex (84532 -> 0x14A34)
+export const EVM_CHAIN_ID_HEX =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env?.VITE_EVM_CHAIN_ID_HEX) ||
+  "0x14A34"; // 84532
+
+// CAIP2 identifier for the active EVM network (e.g., eip155:84532 for Base Sepolia)
+export const EVM_CAIP2 =
+  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CAIP2) ||
+  "eip155:84532";
+
+// Optional known ERC20 token addresses on the target EVM network
+export const EVM_USDC_ADDRESS =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env?.VITE_EVM_USDC_ADDRESS) ||
+  "0x0000000000000000000000000000000000000000";
+export const EVM_USDT_ADDRESS =
+  (typeof import.meta !== "undefined" &&
+    (import.meta as any).env?.VITE_EVM_USDT_ADDRESS) ||
+  "0x0000000000000000000000000000000000000000";

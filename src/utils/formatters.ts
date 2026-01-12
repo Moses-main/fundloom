@@ -1,7 +1,7 @@
 // utils/formatters.ts
 
 export const formatAmount = (amount: number): string => {
-  return "₦" + (amount / 1000).toFixed(1) + "K";
+  return "$" + (amount / 1000).toFixed(1) + "K";
 };
 
 export const formatDate = (timestamp: number): string => {
