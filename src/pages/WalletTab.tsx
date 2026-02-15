@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { EVM_CAIP2, EVM_CHAIN_ID_HEX, EVM_CONTRACT_ADDRESS, EVM_USDC_ADDRESS, EVM_USDT_ADDRESS } from "@/utils/constant";
+import {
+  EVM_CAIP2,
+  EVM_CHAIN_ID_HEX,
+  EVM_USDC_ADDRESS,
+  EVM_USDT_ADDRESS,
+} from "@/utils/constant";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { useAccount } from "@starknet-react/core";
 import { useAuth } from "@/context/AuthContext";
 import { Copy, Check } from "lucide-react";
 
 const WalletTab: React.FC = () => {
-  const { address: starknetAddress } = useAccount();
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -23,7 +26,8 @@ const WalletTab: React.FC = () => {
       } catch {}
     };
     update();
-    const handler = (accounts: string[]) => setEvmAddress(accounts && accounts.length ? accounts[0] : null);
+    const handler = (accounts: string[]) =>
+      setEvmAddress(accounts && accounts.length ? accounts[0] : null);
     eth.on?.("accountsChanged", handler);
     return () => {
       cancelled = true;
@@ -31,8 +35,7 @@ const WalletTab: React.FC = () => {
     };
   }, []);
 
-  // Prefer authenticated user's Privy wallet address if available
-  const displayAddr = (user?.walletAddress || starknetAddress || evmAddress) ?? null;
+  const displayAddr = (user?.walletAddress || evmAddress) ?? null;
 
   const handleCopy = async () => {
     if (!displayAddr) return;
@@ -68,7 +71,7 @@ const WalletTab: React.FC = () => {
       <Card className="p-4 space-y-3">
         <h3 className="text-lg font-medium">Campaign Balances</h3>
         <p className="text-sm text-muted-foreground">
-          This section will show per-campaign balances (ETH, USDC, USDT) on the active EVM network and allow withdrawals using your Privy wallet.
+          This section will show per-campaign balances (ETH, USDC, USDT) on the active EVM network and allow withdrawals using your wallet.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="rounded-lg border p-3">
@@ -97,14 +100,10 @@ const WalletTab: React.FC = () => {
 
       <Card className="p-4 space-y-3">
         <h3 className="text-lg font-medium">Networks</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="rounded-lg border p-3">
             <div className="text-sm text-muted-foreground">Base</div>
             <div className="text-sm">Active</div>
-          </div>
-          <div className="rounded-lg border p-3 opacity-60">
-            <div className="text-sm text-muted-foreground">Starknet</div>
-            <div className="text-sm">Coming soon</div>
           </div>
           <div className="rounded-lg border p-3 opacity-60">
             <div className="text-sm text-muted-foreground">Avalanche</div>
