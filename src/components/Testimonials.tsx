@@ -69,11 +69,9 @@ const TestimonialCard = ({ testimonial, active, onClick }: TestimonialCardProps)
   return (
     <div
       className={`relative bg-gray-800 p-8 rounded-2xl border border-gray-700 transition-all duration-300 cursor-pointer ${
-        active
-          ? "scale-100 opacity-100 shadow-xl"
-          : "scale-95 opacity-70 hover:opacity-90"
+        active ? "scale-100 opacity-100 shadow-xl" : "scale-95 opacity-70 hover:opacity-90"
       }`}
-                              onClick={onClick}
+      onClick={onClick}
     >
       <Quote className="absolute top-6 right-6 h-8 w-8 text-indigo-500/20" />
 
@@ -85,24 +83,6 @@ const TestimonialCard = ({ testimonial, active, onClick }: TestimonialCardProps)
               alt={testimonial.name}
               className="w-14 h-14 rounded-full object-cover border-2 border-indigo-500/30"
             />
-            <div className="absolute -bottom-1 -right-1 bg-indigo-500 rounded-full p-1">
-              <div className="bg-gray-900 p-0.5 rounded-full">
-                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-blue-400 flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3 w-3 text-white"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
           </div>
           <div className="ml-4">
             <h4 className="font-bold text-white">{testimonial.name}</h4>
@@ -114,39 +94,17 @@ const TestimonialCard = ({ testimonial, active, onClick }: TestimonialCardProps)
         </div>
       </div>
 
-      <p className="text-gray-300 mb-6 leading-relaxed">
-        "{testimonial.content}"
-      </p>
+      <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.content}"</p>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
-              className={`h-5 w-5 ${
-                i < testimonial.stars
-                  ? "text-yellow-400 fill-current"
-                  : "text-gray-600"
-              }`}
+              className={`h-5 w-5 ${i < testimonial.stars ? "text-yellow-400 fill-current" : "text-gray-600"}`}
             />
           ))}
-          <span className="ml-2 text-sm text-gray-400">
-            {testimonial.stars}.0/5.0
-          </span>
-        </div>
-        <div className="text-indigo-400 hover:text-indigo-300 transition-colors">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <span className="ml-2 text-sm text-gray-400">{testimonial.stars}.0/5.0</span>
         </div>
       </div>
     </div>
@@ -157,38 +115,28 @@ const Testimonials = () => {
   const [activeIndex, setActiveIndex] = React.useState(0);
 
   const nextTestimonial = () => {
-    setActiveIndex((prevIndex) =>
-      prevIndex === testimonials.length - 1 ? 0 : prevIndex + 1
-    );
+    setActiveIndex((prevIndex) => (prevIndex === testimonials.length - 1 ? 0 : prevIndex + 1));
   };
 
   const prevTestimonial = () => {
-    setActiveIndex((prevIndex) =>
-      prevIndex === 0 ? testimonials.length - 1 : prevIndex - 1
-    );
+    setActiveIndex((prevIndex) => (prevIndex === 0 ? testimonials.length - 1 : prevIndex - 1));
   };
 
   return (
     <section className="relative py-20 bg-gray-900 overflow-hidden">
-      {/* Decorative elements */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0icGF0dGVybiIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ0cmFuc3BhcmVudCIvPjxwYXRoIGQ9Ik0gMTAgMCBMIDAgMCBMIDAgMTAgWiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          className="text-center mb-16"
-                                                >
+        <div className="text-center mb-16">
           <span className="inline-block px-3 py-1 text-sm font-medium text-indigo-400 bg-indigo-500/10 rounded-full mb-4 border border-indigo-500/20">
             Success Stories
           </span>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Trusted by Innovators
-          </h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full mx-auto mb-8"></div>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Trusted by Innovators</h2>
+          <div className="w-20 h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full mx-auto mb-8" />
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of creators who've turned their ideas into reality
-            with Fundloom
+            Join thousands of creators who've turned their ideas into reality with Fundloom
           </p>
         </div>
 
@@ -207,7 +155,7 @@ const Testimonials = () => {
           <div className="mt-8 flex justify-center space-x-4">
             <button
               onClick={prevTestimonial}
-              className="p-2 rounded-full bg-white shadow-md text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all"
+              className="p-2 rounded-full bg-white shadow-md text-gray-600 hover:bg-gray-50"
               aria-label="Previous testimonial"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -226,32 +174,12 @@ const Testimonials = () => {
             </div>
             <button
               onClick={nextTestimonial}
-              className="p-2 rounded-full bg-white shadow-md text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all"
+              className="p-2 rounded-full bg-white shadow-md text-gray-600 hover:bg-gray-50"
               aria-label="Next testimonial"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { number: "10,000+", label: "Active Users" },
-            { number: "$50M+", label: "Raised" },
-            { number: "95%", label: "Success Rate" },
-            { number: "24/7", label: "Support" },
-          ].map((stat, index) => (
-            <div
-              key={stat.label}
-              className="p-4"
-                                                                    >
-              <div className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
-                {stat.number}
-              </div>
-              <div className="text-gray-500 mt-2">{stat.label}</div>
-            </div>
-          ))}
         </div>
       </div>
     </section>

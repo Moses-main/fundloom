@@ -16,13 +16,13 @@ interface WalletAuthFormProps {
 
 type WalletChoice = "metamask" | "walletconnect" | "coinbase";
 
-const isInjectedWalletAvailable = typeof window.ethereum !== "undefined";
-const isMobileDevice = isMobile();
+const SUPPORTED_EVM_CHAIN_IDS = new Set([1, 5, 137, 8453, 84532, 11155111]);
 
 export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<WalletChoice>("metamask");
 
   const { show: toast } = useToast();
   const navigate = useNavigate();
@@ -41,16 +41,26 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   useEffect(() => {
     const eth = (window as any)?.ethereum;
     if (!eth) return;
-    const handler = (accounts: string[]) => {
-      setEvmAddress(accounts?.[0] || null);
-    };
+    const handler = (accounts: string[]) => setEvmAddress(accounts?.[0] || null);
     eth.on?.("accountsChanged", handler);
     return () => eth.removeListener?.("accountsChanged", handler);
   }, []);
 
+  const ensureSupportedNetwork = async (web3: providers.Web3Provider) => {
+    const network = await web3.getNetwork();
+    const chainId = Number(network.chainId);
+    if (!SUPPORTED_EVM_CHAIN_IDS.has(chainId)) {
+      throw new Error(
+        `Unsupported network (${chainId}). Please switch to Ethereum, Base, Polygon, Goerli, Sepolia, or Base Sepolia.`
+      );
+    }
+  };
+
   const connectMetaMask = async () => {
+    const isInjectedWalletAvailable = typeof window !== "undefined" && typeof window.ethereum !== "undefined";
+
     if (!isInjectedWalletAvailable) {
-      if (isMobileDevice) {
+      if (isMobile()) {
         window.open(`https://metamask.app.link/dapp/${window.location.host}`, "_blank");
       } else {
         window.open("https://metamask.io/download.html", "_blank");
@@ -61,6 +71,8 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     const web3 = new providers.Web3Provider((window as any).ethereum, "any");
     const accounts = await web3.send("eth_requestAccounts", []);
     if (!accounts?.length) throw new Error("No wallet account found.");
+
+    await ensureSupportedNetwork(web3);
 
     const signer = web3.getSigner();
     const message = `Welcome to FundLoom!\n\nMode: ${mode}\nNonce: ${Date.now()}`;
@@ -81,15 +93,15 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     });
   };
 
-  const handleConnect = async (wallet: WalletChoice) => {
+  const handleConnect = async () => {
     setError(null);
     setIsConnecting(true);
     try {
-      if (wallet !== "metamask") {
+      if (selectedWallet !== "metamask") {
         toast({
           type: "info",
           title: "Coming soon",
-          description: `${wallet} support is temporarily disabled while we stabilize EVM auth.`,
+          description: `${selectedWallet} support is temporarily disabled while we stabilize EVM auth.`,
         });
         return;
       }
@@ -107,6 +119,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const handleDisconnect = async () => {
     await logout();
     setEvmAddress(null);
+    setError(null);
   };
 
   return (
@@ -136,14 +149,25 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            <Button className="w-full" onClick={() => handleConnect("metamask")} disabled={isConnecting}>
-              {isConnecting ? "Connecting..." : "Connect with MetaMask"}
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => handleConnect("walletconnect")}>
-              WalletConnect (coming soon)
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => handleConnect("coinbase")}>
-              Coinbase Wallet (coming soon)
+            <div className="grid grid-cols-3 gap-2">
+              {(["metamask", "walletconnect", "coinbase"] as WalletChoice[]).map((wallet) => (
+                <Button
+                  key={wallet}
+                  type="button"
+                  variant={selectedWallet === wallet ? "default" : "outline"}
+                  className="capitalize"
+                  onClick={() => setSelectedWallet(wallet)}
+                >
+                  {wallet}
+                </Button>
+              ))}
+            </div>
+            <Button className="w-full" onClick={handleConnect} disabled={isConnecting}>
+              {isConnecting
+                ? "Connecting..."
+                : selectedWallet === "metamask"
+                ? "Connect with MetaMask"
+                : `Connect with ${selectedWallet} (coming soon)`}
             </Button>
           </div>
         )}
@@ -155,4 +179,3 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     </Card>
   );
 }
-

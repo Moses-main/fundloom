@@ -167,10 +167,9 @@ export function DonationCard({ campaign }: DonationCardProps) {
         const amountInWei = toWei(donationAmount);
         
         // Call the donate function on the contract
-        const tx = await contract.donate(
-          campaign.id.toString(),
-          { value: amountInWei }
-        );
+        const tx = await contract.donateETH(campaign.id.toString(), {
+          value: amountInWei,
+        });
         
         // Wait for transaction to be mined
         await tx.wait();
@@ -232,11 +231,11 @@ export function DonationCard({ campaign }: DonationCardProps) {
           </button>
           {transactionHash && (
             <a 
-              href={`https://etherscan.io/tx/${transactionHash}`} 
+              href={`https://basescan.org/tx/${transactionHash}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-indigo-600 hover:text-indigo-800"
-              title="View on Etherscan"
+              title="View on block explorer"
             >
               <ExternalLink className="w-5 h-5" />
             </a>
