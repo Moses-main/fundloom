@@ -167,7 +167,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await privyLogout();
       clearAuthStorage();
       setToken(null);
       setUser(null);
@@ -192,24 +191,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       wallets: [{ provider: walletType, chainType: "evm", address }],
     };
 
-    persistSession(sessionToken, normalizedUser, setToken, setUser, setEvmAddress);
-  };
-
-  const loginWithPrivy = async (method: PrivyLoginMethod) => {
-    const { token: privyToken, user: privyUser } = await loginWithPrivyMethod(method);
-    const walletAddress = extractWalletAddress(privyUser);
-
-    const normalizedUser: AuthUser = {
-      id: privyUser.id || walletAddress || `privy-${Date.now()}`,
-      name: extractEmail(privyUser)?.split("@")[0] || (walletAddress ? `Wallet ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "Privy User"),
-      email: extractEmail(privyUser),
-      role: "user",
-      authProvider: "privy",
-      walletAddress,
-      wallets: walletAddress ? [{ provider: "privy", chainType: "evm", address: walletAddress }] : [],
-    };
-
-    persistSession(privyToken, normalizedUser, setToken, setUser, setEvmAddress);
+    localStorage.setItem("auth_token", sessionToken);
+    localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
+    setToken(sessionToken);
+    setUser(normalizedUser);
+    setEvmAddress(address);
+    window.dispatchEvent(new Event("auth_changed"));
   };
 
   const value: AuthContextType = {
