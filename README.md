@@ -1,6 +1,14 @@
 # FundLoom Frontend (Vite + React)
 
-A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming. The current frontend uses localStorage as its data source but is designed to work with a REST backend.
+A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming.
+
+## 🔐 Authentication Direction (Privy-first)
+
+This project is now moving to **wallet-first authentication without requiring backend auth endpoints**.
+
+- Wallet login now verifies signed messages client-side and creates a local session.
+- The next step is wiring this same flow to Privy SDK (`VITE_PRIVY_APP_ID`) for production-grade auth + embedded wallet UX.
+- Legacy JWT endpoints can remain optional/fallback while contract and onchain flows mature.
 
 ## 🌟 Features
 
@@ -102,6 +110,24 @@ Note: In production, IDs will be strings (MongoDB ObjectIds). The UI handles num
 - Create Campaign: Opens modal, preview image, basic client-side validation, stores to localStorage.
 - Donate: Opens modal, capture amount/message/method, simulates processing for non-crypto, updates state + shows thank-you.
 - Comment: Adds a comment to the selected campaign and persists to localStorage.
+
+
+## 🧭 What Privy Can and Cannot Replace
+
+For your decentralized fundraising model (crypto + fiat), Privy is a great fit for identity and wallet UX, but not a full backend replacement by itself.
+
+### Great fit for Privy / onchain
+- User sign-in (wallet, email/social if enabled in Privy).
+- Wallet management and signing UX.
+- Onchain donation flows (Base / Base Sepolia, and other EVM networks).
+
+### Still recommended offchain services (light backend or managed services)
+- Fiat payment processing (Stripe/Paystack/Ramp/etc.) + webhook verification.
+- Receipt history and searchable analytics dashboards.
+- Abuse prevention/moderation (spam comments, campaign reports).
+- Notification workflows (email receipts, campaign updates).
+
+> Short version: **Privy can replace most auth backend work**, but fiat and operational workflows still need offchain infrastructure.
 
 ## 🔗 Intended Backend API Contract
 
