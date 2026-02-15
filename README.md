@@ -1,6 +1,12 @@
 # FundLoom Frontend (Vite + React)
 
-A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming. The current frontend uses localStorage as its data source but is designed to work with a REST backend.
+A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming.
+
+## ⚠️ Backend Requirement Status
+
+The **current routed app (`src/App.tsx`) is backend-first** and expects a live API for core flows (auth, campaigns, donations, profile). Without a backend, most protected screens will not function.
+
+There are still legacy/demo files that use localStorage (`src/entireApp.tsx`, `src/pages/DemoDashboard.tsx`), but they are not wired into the main route tree by default.
 
 ## 🌟 Features
 
