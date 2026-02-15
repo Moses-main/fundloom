@@ -16,7 +16,7 @@ interface WalletAuthFormProps {
 
 type WalletChoice = "metamask" | "walletconnect" | "coinbase";
 
-const SUPPORTED_EVM_CHAIN_IDS = new Set([1, 5, 137, 8453, 84532, 11155111]);
+const SUPPORTED_EVM_CHAIN_IDS = new Set([8453, 84532, 11155111]);
 
 export function WalletAuthForm({ mode }: WalletAuthFormProps) {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -51,7 +51,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
     const chainId = Number(network.chainId);
     if (!SUPPORTED_EVM_CHAIN_IDS.has(chainId)) {
       throw new Error(
-        `Unsupported network (${chainId}). Please switch to Ethereum, Base, Polygon, Goerli, Sepolia, or Base Sepolia.`
+        `Unsupported network (${chainId}). Please switch to Base, Base Sepolia, or Sepolia.`
       );
     }
   };
@@ -101,7 +101,7 @@ export function WalletAuthForm({ mode }: WalletAuthFormProps) {
         toast({
           type: "info",
           title: "Coming soon",
-          description: `${selectedWallet} support is temporarily disabled while we stabilize EVM auth.`,
+          description: `${selectedWallet} support will be enabled via Privy integration shortly.`,
         });
         return;
       }
