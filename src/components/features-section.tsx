@@ -1,8 +1,18 @@
 import React from 'react';
-import { motion, useInView } from 'framer-motion';
 import { CreditCard, Zap, ShieldCheck, Users, ArrowRight } from 'lucide-react';
 
-const features = [
+
+interface Feature {
+  icon: React.ReactElement<any>;
+  title: string;
+  description: string;
+  color: string;
+  bg: string;
+}
+
+type FeatureCardProps = Feature;
+
+const features: Feature[] = [
   {
     icon: <CreditCard className="w-6 h-6 text-indigo-400" />,
     title: 'Accept Crypto & Fiat',
@@ -33,22 +43,11 @@ const features = [
   }
 ];
 
-const FeatureCard = ({ icon, title, description, index, color, bg }) => {
-  const ref = React.useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  
+const FeatureCard = ({ icon, title, description, color, bg }: FeatureCardProps) => {
   return (
-    <motion.div
-      ref={ref}
-      className={`group relative overflow-hidden p-0.5 rounded-xl ${bg} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
-      initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-      transition={{ 
-        duration: 0.6, 
-        delay: index * 0.1,
-        ease: [0.16, 1, 0.3, 1]
-      }}
-    >
+    <div
+            className={`group relative overflow-hidden p-0.5 rounded-xl ${bg} hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}
+                      >
       <div className="relative z-10 bg-white p-6 rounded-xl h-full">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${bg}`}>
           {React.cloneElement(icon, { className: `w-6 h-6 ${color.replace('from-', 'text-').split(' ')[0]}` })}
@@ -61,21 +60,11 @@ const FeatureCard = ({ icon, title, description, index, color, bg }) => {
         </div>
       </div>
       <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
-    </motion.div>
+    </div>
   );
 };
 
 const FeaturesSection = () => {
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      }
-    }
-  };
 
   return (
     <section className="py-20 bg-gradient-to-b from-gray-900 to-gray-800 relative overflow-hidden">
@@ -100,7 +89,7 @@ const FeaturesSection = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
-            <FeatureCard key={index} index={index} {...feature} />
+            <FeatureCard key={index} {...feature} />
           ))}
         </div>
       </div>
@@ -114,19 +103,15 @@ const FeaturesSection = () => {
             { number: '500K+', label: 'Backers' },
             { number: '99.9%', label: 'Uptime' }
           ].map((stat, index) => (
-            <motion.div 
+            <div 
               key={stat.label}
               className="p-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
+                                                                    >
               <div className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
                 {stat.number}
               </div>
               <div className="text-gray-500 mt-2">{stat.label}</div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

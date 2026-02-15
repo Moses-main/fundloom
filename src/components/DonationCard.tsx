@@ -22,17 +22,6 @@ interface DonationCardProps {
   };
 }
 
-// Helper function to convert ETH to Wei (1 ETH = 1e18 Wei)
-const toWei = (eth: string): string => {
-  try {
-    const wei = BigInt(Math.floor(parseFloat(eth) * 1e18));
-    return wei.toString();
-  } catch (error) {
-    console.error('Error converting ETH to Wei:', error);
-    return '0';
-  }
-};
-
 export function DonationCard({ campaign }: DonationCardProps) {
   const [donationAmount, setDonationAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto');
@@ -51,7 +40,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
   const getContract = () => {
     if (!isMetaMaskInstalled) return null;
     
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
     const signer = provider.getSigner();
     return new ethers.Contract(FUNDLOOM_CONTRACT_ADDRESS, FUNDLOOM_ABI, signer);
   };
@@ -76,7 +65,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
       showToast({
         title: "MetaMask Not Found",
         description: "Please install MetaMask to connect your wallet.",
-        variant: "destructive"
+        type: "error"
       });
       return;
     }
@@ -91,7 +80,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
       showToast({
         title: "Connection Error",
         description: "Failed to connect wallet. Please try again.",
-        variant: "destructive"
+        type: "error"
       });
     }
   };
@@ -116,7 +105,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
   
   // Helper to convert ETH to Wei
   const toWei = (eth: string): string => {
-    return ethers.parseEther(eth).toString();
+    return ethers.utils.parseEther(eth).toString();
   };
   
   // Effect to handle transaction status
@@ -215,7 +204,7 @@ export function DonationCard({ campaign }: DonationCardProps) {
       showToast({
         title: "Donation Failed",
         description: error instanceof Error ? error.message : "There was an error processing your donation. Please try again.",
-        variant: "destructive"
+        type: "error"
       });
     } finally {
       setIsDonating(false);

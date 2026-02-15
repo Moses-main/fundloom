@@ -1,8 +1,24 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { Quote, Star, ChevronLeft, ChevronRight } from "lucide-react";
 
-const testimonials = [
+interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  content: string;
+  avatar: string;
+  stars: number;
+  amount: string;
+  time: string;
+}
+
+interface TestimonialCardProps {
+  testimonial: Testimonial;
+  active: boolean;
+  onClick: () => void;
+}
+
+const testimonials: Testimonial[] = [
   {
     id: 1,
     name: "Sarah Chen",
@@ -49,19 +65,15 @@ const testimonials = [
   },
 ];
 
-const TestimonialCard = ({ testimonial, active, onClick }) => {
+const TestimonialCard = ({ testimonial, active, onClick }: TestimonialCardProps) => {
   return (
-    <motion.div
+    <div
       className={`relative bg-gray-800 p-8 rounded-2xl border border-gray-700 transition-all duration-300 cursor-pointer ${
         active
           ? "scale-100 opacity-100 shadow-xl"
           : "scale-95 opacity-70 hover:opacity-90"
       }`}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: active ? 1 : 0.7, y: active ? 0 : 30 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      onClick={onClick}
+                              onClick={onClick}
     >
       <Quote className="absolute top-6 right-6 h-8 w-8 text-indigo-500/20" />
 
@@ -137,7 +149,7 @@ const TestimonialCard = ({ testimonial, active, onClick }) => {
           </svg>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -164,13 +176,9 @@ const Testimonials = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
+        <div
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-        >
+                                                >
           <span className="inline-block px-3 py-1 text-sm font-medium text-indigo-400 bg-indigo-500/10 rounded-full mb-4 border border-indigo-500/20">
             Success Stories
           </span>
@@ -182,7 +190,7 @@ const Testimonials = () => {
             Join thousands of creators who've turned their ideas into reality
             with Fundloom
           </p>
-        </motion.div>
+        </div>
 
         <div className="relative">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -234,19 +242,15 @@ const Testimonials = () => {
             { number: "95%", label: "Success Rate" },
             { number: "24/7", label: "Support" },
           ].map((stat, index) => (
-            <motion.div
+            <div
               key={stat.label}
               className="p-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
+                                                                    >
               <div className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
                 {stat.number}
               </div>
               <div className="text-gray-500 mt-2">{stat.label}</div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

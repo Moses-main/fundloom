@@ -193,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithWallet = async ({ address, signature, message, walletType }: LoginWithWalletParams) => {
     try {
       // Call your backend API to authenticate with the wallet
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'}/auth/wallet`, {
+      const response = await fetch(`${(import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'}/auth/wallet`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
