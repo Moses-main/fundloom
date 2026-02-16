@@ -402,6 +402,69 @@ export async function initPaystackCard(input: {
   );
 }
 
+
+
+export type CampaignUpdateItem = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  content?: string;
+  message?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  author?: { _id?: string; name?: string } | null;
+  authorName?: string;
+  moderationStatus?: string;
+};
+
+export async function getCampaignUpdates(
+  campaignId: string,
+  page = 1,
+  limit = 20
+) {
+  const q = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  }).toString();
+  return apiFetch<{ updates: CampaignUpdateItem[]; pagination?: any }>(
+    `/campaigns/${encodeURIComponent(campaignId)}/updates?${q}`
+  );
+}
+
+export async function createCampaignUpdate(
+  campaignId: string,
+  input: { title: string; content: string },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ update: CampaignUpdateItem }>(
+    `/campaigns/${encodeURIComponent(campaignId)}/updates`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function patchCampaignLifecycle(
+  campaignId: string,
+  input: {
+    isActive?: boolean;
+    isArchived?: boolean;
+    moderationReason?: string;
+    lifecycleStatus?: string;
+  },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ campaign: any }>(`/campaigns/${encodeURIComponent(campaignId)}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Comments ----------
 export async function createComment(
   campaignId: string,
@@ -416,9 +479,54 @@ export async function createComment(
   });
 }
 
+
+
+export async function reportCampaignComment(
+  campaignId: string,
+  commentId: string,
+  input: { reason: string; details?: string },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ report: any }>(
+    `/comments/campaign/${encodeURIComponent(campaignId)}/${encodeURIComponent(commentId)}/report`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function reportCampaign(campaignId: string, input: { reason: string; details?: string }, token: string) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ report: any }>(`/campaigns/${encodeURIComponent(campaignId)}/report`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- User / Account helpers ----------
 export async function getMe() {
   return apiFetch<{ user: any }>(`/auth/me`, { method: "GET" });
+}
+
+export async function refreshSession() {
+  return apiFetch<AuthPayload>(`/auth/refresh`, { method: "POST" });
+}
+
+export async function logAuthEvent(input: {
+  event: string;
+  provider?: string;
+  success: boolean;
+  message?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  return apiFetch<{ logged?: boolean }>(`/auth/audit`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getUserDashboard() {
