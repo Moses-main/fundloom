@@ -3,9 +3,8 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { ThemeToggle } from "../components/theme-toggle";
-import { Menu, X, Zap, CheckCircle } from "lucide-react";
+import { Menu, X, Zap } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
-import { WalletConnectorModal } from "../components/modal/WalletConnector";
 import { useAuth } from "@/context/AuthContext";
 
 export const Header: React.FC = () => {
@@ -15,33 +14,27 @@ export const Header: React.FC = () => {
   const isDashboard = location.pathname.startsWith("/dashboard");
   const { activeTab, setActiveTab } = useAppContext();
   const { isAuthenticated: isAuthed, logout } = useAuth();
-  
-  // Detect EVM wallet (MetaMask) connection
   const [evmAddress, setEvmAddress] = useState<string | null>(null);
-  
+
   useEffect(() => {
-    const eth = (window as any)?.ethereum;
+    const eth = (window as { ethereum?: { request?: (args: { method: string }) => Promise<string[]>; on?: (event: string, handler: (accounts: string[]) => void) => void; removeListener?: (event: string, handler: (accounts: string[]) => void) => void; } }).ethereum;
     if (!eth) return;
-    
+
     const update = async () => {
       try {
-        const accounts: string[] = await eth.request({
-          method: "eth_accounts",
-        });
+        const accounts: string[] = (await eth.request?.({ method: "eth_accounts" })) || [];
         setEvmAddress(accounts && accounts.length ? accounts[0] : null);
-      } catch {}
+      } catch {
+        setEvmAddress(null);
+      }
     };
-    
+
     update();
-    const handler = (accounts: string[]) =>
-      setEvmAddress(accounts && accounts.length ? accounts[0] : null);
-      
+    const handler = (accounts: string[]) => setEvmAddress(accounts && accounts.length ? accounts[0] : null);
     eth.on?.("accountsChanged", handler);
-    return () => {
-      eth.removeListener?.("accountsChanged", handler);
-    };
+    return () => eth.removeListener?.("accountsChanged", handler);
   }, []);
-  
+
   const handleLogout = async () => {
     await logout();
     setEvmAddress(null);
@@ -49,188 +42,112 @@ export const Header: React.FC = () => {
     navigate("/");
   };
 
+  const dashboardTabs: Array<"overview" | "donated" | "profile" | "campaigns" | "wallet"> = [
+    "overview",
+    "donated",
+    "profile",
+    "campaigns",
+    "wallet",
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-2">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Zap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-mono text-xl font-bold">FundLoom</span>
+          </span>
+          <span className="text-lg font-semibold">FundLoom</span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
-          {isDashboard ? (
-            <div className="flex items-center gap-2">
-              {(["overview", "donated", "profile", "campaigns", "wallet"] as const).map((tab) => {
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      setActiveTab(tab as any);
-                      navigate(`/dashboard?tab=${tab}`);
-                    }}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                      ${
-                        activeTab === tab
-                          ? "bg-muted text-foreground"
-                          : "hover:bg-muted/60 text-muted-foreground"
-                      }`}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <></>
-          )}
+        <nav className="hidden items-center gap-2 md:flex">
+          {isDashboard &&
+            dashboardTabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  navigate(`/dashboard?tab=${tab}`);
+                }}
+                className={`rounded-md px-3 py-2 text-sm capitalize transition-colors ${
+                  activeTab === tab ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
         </nav>
 
-        <div className="flex items-center space-x-3 lg:space-x-4">
+        <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
-          <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
-            {isDashboard ? (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
-                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-foreground">
-                    {evmAddress?.slice(0, 6)}...{evmAddress?.slice(-4)}
-                  </span>
-                </div>
-                <Button size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <WalletConnectorModal />
-            )}
-          </div>
+          {isDashboard && (isAuthed || evmAddress) ? (
+            <>
+              <span className="rounded-md border bg-muted/40 px-3 py-1.5 text-xs font-medium">
+                {evmAddress ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}` : "Connected"}
+              </span>
+              <Button size="sm" variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button asChild size="sm">
+              <Link to="/auth">Start process</Link>
+            </Button>
+          )}
+        </div>
 
-          {/* Mobile Menu Button */}
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
             aria-label="Toggle navigation menu"
-            aria-expanded={isMenuOpen}
-            aria-controls="mobile-nav"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => setIsMenuOpen((v) => !v)}
           >
-            {isMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
+
       {isMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          <nav
-            id="mobile-nav"
-            className="absolute inset-x-0 top-16 z-50 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-          >
-            <div
-              className="rounded-2xl border bg-background/95 shadow-lg p-4 space-y-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-2 pb-2">
-                <span className="text-sm font-medium text-muted-foreground">Menu</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Close menu"
-                  onClick={() => setIsMenuOpen(false)}
+        <div className="border-t bg-background px-4 py-3 md:hidden">
+          {isDashboard ? (
+            <div className="space-y-1">
+              {dashboardTabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    navigate(`/dashboard?tab=${tab}`);
+                    setIsMenuOpen(false);
+                  }}
+                  className={`block w-full rounded-md px-3 py-2 text-left text-sm capitalize ${
+                    activeTab === tab ? "bg-muted" : "text-muted-foreground"
+                  }`}
                 >
-                  <X className="h-5 w-5" />
-                </Button>
+                  {tab}
+                </button>
+              ))}
+              <div className="pt-2">
+                {(isAuthed || evmAddress) ? (
+                  <Button className="w-full" variant="outline" onClick={handleLogout}>Logout</Button>
+                ) : (
+                  <Button asChild className="w-full">
+                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>Start process</Link>
+                  </Button>
+                )}
               </div>
-              {isDashboard ? (
-                <>
-                  {["overview", "donated", "profile", "campaigns", "wallet"].map(
-                    (tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => {
-                          setActiveTab(tab as any);
-                          navigate(`/dashboard?tab=${tab}`);
-                          setIsMenuOpen(false);
-                        }}
-                        className={`block w-full text-left rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50 ${
-                          activeTab === (tab as any) ? "bg-muted/60" : ""
-                        }`}
-                      >
-                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                      </button>
-                    )
-                  )}
-                  <div className="pt-2 grid grid-cols-1 gap-2">
-                    {isAuthed || evmAddress ? (
-                      <Button
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </Button>
-                    ) : (
-                      <div className="w-full">
-                        <WalletConnectorModal />
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/docs/api"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    API Docs
-                  </Link>
-                  <Link
-                    to="/docs/protocol"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Protocol
-                  </Link>
-                  <Link
-                    to="/feature"
-                    className="block rounded-lg px-4 py-3 text-base font-medium hover:bg-muted/50"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Feature Page
-                  </Link>
-                  <div className="pt-2 grid grid-cols-2 gap-2">
-                    {isAuthed || evmAddress ? (
-                      <Button
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          handleLogout();
-                        }}
-                      >
-                        Logout
-                      </Button>
-                    ) : (
-                      <div className="w-full">
-                        <WalletConnectorModal />
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
             </div>
-          </nav>
+          ) : (
+            <div className="space-y-2">
+              <Link to="/campaigns" className="block rounded-md px-3 py-2 text-sm" onClick={() => setIsMenuOpen(false)}>
+                Campaigns
+              </Link>
+              <Link to="/auth" className="block rounded-md px-3 py-2 text-sm" onClick={() => setIsMenuOpen(false)}>
+                Sign in
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

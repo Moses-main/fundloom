@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/components/ui/ToastProvider";
 import { sendEth } from "@/lib/crypto";
 import { loadingBus } from "@/lib/loadingBus";
+import { deriveCampaignLifecycleStatus, type CampaignLifecycleStatus } from "@/lib/campaignLifecycle";
 
 /* ---------- Types (same as your single-file app) ---------- */
 export type PaymentMethod = "crypto" | "card" | "bank" | "mobile";
@@ -41,6 +42,9 @@ export interface Campaign {
   deadline: number;
   is_active: boolean;
   is_verified?: boolean;
+  lifecycle_status?: CampaignLifecycleStatus;
+  moderation_reason?: string | null;
+  archived_at?: number | null;
   created_at: number;
   total_donors: number;
   image?: string | null;
@@ -346,6 +350,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           deadline: new Date(bc.deadline).getTime(),
           is_active: bc.isActive ?? true,
           is_verified: Boolean(bc?.verification?.isVerified ?? false),
+          lifecycle_status: deriveCampaignLifecycleStatus({
+            status: bc.lifecycleStatus || bc.status,
+            isActive: bc.isActive,
+            isVerified: bc?.verification?.isVerified,
+            raisedAmount: bc.raisedAmount,
+            targetAmount: bc.targetAmount,
+            deadline: bc.deadline,
+            isArchived: bc.isArchived,
+            isFlagged: bc.isFlagged,
+          }),
+          moderation_reason: bc?.verification?.reason || bc?.moderationReason || null,
+          archived_at: bc?.archivedAt ? new Date(bc.archivedAt).getTime() : null,
           created_at: new Date(bc.createdAt).getTime(),
           total_donors: bc.totalDonors ?? 0,
           image: bc.image || null,
