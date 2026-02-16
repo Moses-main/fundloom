@@ -1,8 +1,10 @@
 // src/context/AuthContext.tsx
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import { clearAuth as clearAuthStorage } from "@/lib/api";
+import { loginWithPrivyMethod, privyLogout, type PrivyLoginMethod, type PrivyUserLike } from "@/lib/privyRuntime";
 
 export type AuthUser = {
   id?: string;
@@ -30,9 +32,33 @@ export type AuthContextType = {
   token: string | null;
   logout: () => Promise<void>;
   loginWithWallet: (params: LoginWithWalletParams) => Promise<void>;
+  loginWithPrivy: (method: PrivyLoginMethod) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function extractEmail(user: PrivyUserLike): string | undefined {
+  if (typeof user.email === "string") return user.email;
+  if (user.email && typeof user.email === "object") return user.email.address;
+  const emailAccount = user.linkedAccounts?.find((a) => a.email);
+  return emailAccount?.email;
+}
+
+function extractWalletAddress(user: PrivyUserLike): string | null {
+  if (user.wallet?.address) return user.wallet.address;
+  if (Array.isArray(user.wallets) && user.wallets[0]?.address) return user.wallets[0].address;
+  const linkedWallet = user.linkedAccounts?.find((a) => a.address);
+  return linkedWallet?.address || null;
+}
+
+function persistSession(token: string, normalizedUser: AuthUser, setToken: (t: string | null) => void, setUser: (u: AuthUser | null) => void, setEvmAddress: (a: string | null) => void) {
+  localStorage.setItem("auth_token", token);
+  localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
+  setToken(token);
+  setUser(normalizedUser);
+  setEvmAddress(normalizedUser.walletAddress || null);
+  window.dispatchEvent(new Event("auth_changed"));
+}
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
@@ -98,13 +124,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    const eth = (window as any)?.ethereum;
+    const eth = (window as { ethereum?: { request?: (args: { method: string }) => Promise<string[]>; on?: (event: string, handler: (accounts: string[]) => void) => void; removeListener?: (event: string, handler: (accounts: string[]) => void) => void; } }).ethereum;
     if (!eth) return;
     let cancelled = false;
 
     const update = async () => {
       try {
-        const accounts: string[] = await eth.request?.({ method: "eth_accounts" });
+        const accounts: string[] = await eth.request?.({ method: "eth_accounts" }) || [];
         if (!cancelled) setEvmAddress(accounts && accounts.length ? accounts[0] : null);
       } catch {
         if (!cancelled) setEvmAddress(null);
@@ -182,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token,
     logout,
     loginWithWallet,
+    loginWithPrivy,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
