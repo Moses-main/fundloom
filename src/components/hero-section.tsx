@@ -1,122 +1,65 @@
-import { Button } from "../components/ui/Button";
-import {
-  ArrowRight,
-  Play,
-  Users,
-  DollarSign,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Shield, Wallet, Globe2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+
+const metrics = [
+  { label: "Supported rails", value: "Crypto + Fiat" },
+  { label: "Target networks", value: "Base / Sepolia" },
+  { label: "Design goal", value: "Transparent funding" },
+];
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
-      <div className="absolute -top-10 -left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-10 -right-10 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+    <section className="animate-in fade-in-0 duration-500 border-b bg-gradient-to-b from-background to-muted/40">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24 lg:px-8">
+        <div className="space-y-6">
+          <p className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+            FundLoom · Decentralized fundraising
+          </p>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            Raise and receive contributions with a cleaner onchain workflow.
+          </h1>
+          <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
+            FundLoom helps creators launch transparent campaigns, accept crypto on Base, and support hybrid payment experiences without heavy operational overhead.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <a href="/auth?mode=signup">
+                Launch a Campaign
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <a href="/campaigns">Explore Campaigns</a>
+            </Button>
+          </div>
+        </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          {/* Left: Text + CTA */}
-          <div className="text-center lg:text-left">
-            <div className="mb-6 flex justify-center lg:justify-start animate-fade-in-up">
-              <div className="flex items-center space-x-2 rounded-full border bg-background/80 backdrop-blur-sm px-4 py-2 text-sm shadow-lg">
-                <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse" />
-                <span className="font-medium">
-                  Decentralized • Secure • For Everyone
-                </span>
-              </div>
+        <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border bg-background p-4">
+              <Wallet className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-medium">Wallet-first identity</p>
+              <p className="mt-1 text-sm text-muted-foreground">Sign-in designed for web3 users and campaign operators.</p>
             </div>
-
-            <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl animate-fade-in-up">
-              Fund the Future,
-              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                {" "}
-                Empower Dreams
-              </span>
-            </h1>
-
-            <p className="mb-8 text-lg sm:text-xl text-muted-foreground max-w-2xl lg:max-w-none lg:pr-6 leading-relaxed animate-fade-in-up">
-              Create campaigns and receive support through multiple payment
-              methods. Built for crypto enthusiasts and everyday supporters
-              alike.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 justify-center lg:justify-start animate-fade-in-up">
-              <Button
-                size="lg"
-                asChild
-                className="text-base sm:text-lg px-7 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all"
-              >
-                <a href="/auth?mode=signup">
-                  Start Your Campaign
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </a>
-              </Button>
+            <div className="rounded-xl border bg-background p-4">
+              <Shield className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-medium">Trust by default</p>
+              <p className="mt-1 text-sm text-muted-foreground">Structured around transparent transactions and clear campaign ownership.</p>
             </div>
-
-            {/* Stats */}
-            <div className="mt-10 grid grid-cols-3 gap-3 max-w-lg mx-auto lg:mx-0 animate-fade-in-up">
-              <div className="text-center p-3 rounded-lg bg-background/60 backdrop-blur-sm border">
-                <div className="text-indigo-700 text-2xl font-bold font-mono">
-                  10K+
-                </div>
-                <div className="text-xs text-muted-foreground">Active</div>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-background/60 backdrop-blur-sm border">
-                <div className="text-indigo-700 text-2xl font-bold font-mono">
-                  $2M+
-                </div>
-                <div className="text-xs text-muted-foreground">Raised</div>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-background/60 backdrop-blur-sm border">
-                <div className="text-indigo-700 text-2xl font-bold font-mono">
-                  100%
-                </div>
-                <div className="text-xs text-muted-foreground">Secure</div>
-              </div>
+            <div className="rounded-xl border bg-background p-4 sm:col-span-2">
+              <Globe2 className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm font-medium">Built for global communities</p>
+              <p className="mt-1 text-sm text-muted-foreground">Support donors across crypto and fiat channels while keeping the UX simple.</p>
             </div>
           </div>
 
-          {/* Right: Large icon mosaic */}
-          <div className="hidden lg:block">
-            <div className="relative mx-auto w-full max-w-xl aspect-square">
-              {/* Outer ring */}
-              <div className="absolute inset-0 rounded-[2rem] border border-indigo-200/60" />
-              {/* Icon grid */}
-              <div className="grid grid-cols-3 gap-4 h-full p-6">
-                <div className="flex items-center justify-center rounded-2xl bg-indigo-50">
-                  <Users className="h-16 w-16 text-indigo-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-purple-50">
-                  <DollarSign className="h-16 w-16 text-purple-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-indigo-100/50">
-                  <Shield className="h-16 w-16 text-indigo-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-purple-100/50">
-                  <Users className="h-16 w-16 text-purple-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-indigo-50">
-                  <DollarSign className="h-16 w-16 text-indigo-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-purple-50">
-                  <Shield className="h-16 w-16 text-purple-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-indigo-100/50">
-                  <Users className="h-16 w-16 text-indigo-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-purple-100/50">
-                  <DollarSign className="h-16 w-16 text-purple-700" />
-                </div>
-                <div className="flex items-center justify-center rounded-2xl bg-indigo-50">
-                  <Shield className="h-16 w-16 text-indigo-700" />
-                </div>
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="rounded-lg border bg-background px-3 py-2">
+                <p className="text-xs text-muted-foreground">{metric.label}</p>
+                <p className="text-sm font-medium">{metric.value}</p>
               </div>
-              {/* Glow */}
-              <div className="pointer-events-none absolute -inset-4 rounded-[2.5rem] ring-1 ring-indigo-500/30" />
-            </div>
+            ))}
           </div>
         </div>
       </div>

@@ -5,31 +5,46 @@ import CampaignStats from "../components/CampaignStats";
 import SearchFilterBar from "../components/SearchFilterBar";
 import CampaignList from "../components/CampaignList";
 import Leaderboard from "../components/Leaderboard";
-
-// Wallet summary removed from overview; shown on Profile tab instead
+import { lifecycleLabel } from "@/lib/campaignLifecycle";
 
 const CampaignsPage: React.FC = () => {
-  const { campaigns, donations, leaderboard } = useAppContext();
+  const { campaigns, leaderboard } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   const categories = [
     "All",
     ...Array.from(new Set(campaigns.map((c) => c.category || "Uncategorized"))),
   ];
-  // filtered campaigns passed to CampaignList
+
+  const statuses = [
+    "All",
+    ...Array.from(
+      new Set(
+        campaigns.map((c) =>
+          lifecycleLabel(c.lifecycle_status || (c.is_active ? "active" : "paused"))
+        )
+      )
+    ),
+  ];
+
   const filteredCampaigns = useMemo(() => {
     return campaigns
-      .filter((c: any) => !!(c as any).backendId)
+      .filter((c) => Boolean((c as { backendId?: string }).backendId))
       .filter((c) => {
         const matchesSearch =
           c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory =
           categoryFilter === "All" || c.category === categoryFilter;
-        return matchesSearch && matchesCategory;
+        const lifecycle = lifecycleLabel(
+          c.lifecycle_status || (c.is_active ? "active" : "paused")
+        );
+        const matchesStatus = statusFilter === "All" || lifecycle === statusFilter;
+        return matchesSearch && matchesCategory && matchesStatus;
       });
-  }, [campaigns, searchTerm, categoryFilter]);
+  }, [campaigns, searchTerm, categoryFilter, statusFilter]);
 
   return (
     <div>
@@ -42,6 +57,9 @@ const CampaignsPage: React.FC = () => {
           categories={categories}
           categoryFilter={categoryFilter}
           setCategoryFilter={setCategoryFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          statuses={statuses}
         />
       </div>
 
