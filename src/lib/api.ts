@@ -648,3 +648,36 @@ export async function adminUnlockUser(id: string, auth: BasicAuth) {
 export async function adminDeleteUser(id: string, auth: BasicAuth) {
   return apiFetch<{}>(`/admin/users/${id}`, withBasic({ method: "DELETE" }, auth.basicToken));
 }
+
+
+export async function adminListReports(
+  params: { page?: number; limit?: number; status?: string },
+  auth: BasicAuth
+) {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.status) q.set("status", params.status);
+  const path = `/admin/reports${q.toString() ? `?${q.toString()}` : ""}`;
+  return apiFetch<{ reports: any[]; pagination?: any }>(
+    path,
+    withBasic(undefined, auth.basicToken)
+  );
+}
+
+export async function adminResolveReport(
+  reportId: string,
+  input: { status: "resolved" | "rejected"; resolutionNote?: string },
+  auth: BasicAuth
+) {
+  return apiFetch<{ report: any }>(
+    `/admin/reports/${encodeURIComponent(reportId)}`,
+    withBasic(
+      {
+        method: "PUT",
+        body: JSON.stringify(input),
+      },
+      auth.basicToken
+    )
+  );
+}
