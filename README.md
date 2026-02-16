@@ -46,6 +46,7 @@ FundLoom is a decentralized fundraising platform focused on transparent campaign
   - ✅ Added donation transaction state machine UX (`initiated`, `wallet_prompt`, `pending`, `confirmed`, `failed`) in donation modal flow.
   - ✅ Added explicit chain/network guardrails with guided wallet network switching to configured EVM chain before submit.
   - ✅ Added best-effort backend crypto donation reconciliation hook using tx hash after on-chain submission.
+  - ✅ Wired frontend smart-contract interactions for `createCampaign` (optional toggle), `donate`, and token allowance checks.
 - ⏳ Remaining Phase 3+ items pending.
 - 🔄 **Phase 4 (started): Community & Trust**
   - ✅ Added discussion anti-spam controls (client-side suspicious-content checks, char limit, post cooldown).
@@ -166,6 +167,11 @@ Important variables:
 - `VITE_RPC_BASE_SEPOLIA`
 - `VITE_RPC_BASE_MAINNET`
 - `VITE_WALLETCONNECT_PROJECT_ID`
+- `VITE_EVM_CONTRACT_ADDRESS`
+- `VITE_EVM_CHAIN_ID_HEX`
+- `VITE_ENABLE_ONCHAIN_CAMPAIGN_CREATE`
+- `VITE_EVM_USDC_ADDRESS`
+- `VITE_EVM_USDT_ADDRESS`
 
 ## Development
 
