@@ -46,15 +46,11 @@ FundLoom is a decentralized fundraising platform focused on transparent campaign
   - ✅ Added donation transaction state machine UX (`initiated`, `wallet_prompt`, `pending`, `confirmed`, `failed`) in donation modal flow.
   - ✅ Added explicit chain/network guardrails with guided wallet network switching to configured EVM chain before submit.
   - ✅ Added best-effort backend crypto donation reconciliation hook using tx hash after on-chain submission.
-  - ✅ Wired frontend smart-contract interactions for `createCampaign` (optional toggle), `donate`, and token allowance checks.
 - ⏳ Remaining Phase 3+ items pending.
 - 🔄 **Phase 4 (started): Community & Trust**
   - ✅ Added discussion anti-spam controls (client-side suspicious-content checks, char limit, post cooldown).
   - ✅ Added campaign-level and comment-level abuse reporting actions wired to moderation API hooks.
-- 🔄 **Phase 5 (started): Admin Features (Track + Resolve Platform Issues)**
-  - ✅ Added admin incident snapshot cards (pending reviews, inactive campaigns, locked users, open reports).
-  - ✅ Added admin moderation queue UI with resolve/reject case actions (backend endpoint-ready).
-- ⏳ Remaining Phase 5+ items pending.
+- ⏳ Remaining Phase 4+ items pending.
 
 
 ### Phase 1 — Security & Auth Hardening
@@ -115,15 +111,15 @@ flowchart LR
   S --> D[Dashboard/Campaign Access]
 ```
 
-### 2) Campaign Contribution Flow (Non-fiat)
-```mermaid
-flowchart LR
-  U[Donor] --> C[Select Campaign]
-  C --> W[Wallet Transaction]
-  W --> X[Chain Confirmation]
-  X --> R[Record Donation + Update Stats]
-  R --> T[Thank You + Report View]
-```
+A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming.
+
+## 🔐 Authentication Direction (Privy-first)
+
+This project is now moving to **wallet-first authentication without requiring backend auth endpoints**.
+
+- Wallet login now verifies signed messages client-side and creates a local session.
+- The next step is wiring this same flow to Privy SDK (`VITE_PRIVY_APP_ID`) for production-grade auth + embedded wallet UX.
+- Legacy JWT endpoints can remain optional/fallback while contract and onchain flows mature.
 
 ### 3) Admin Issue Resolution Flow
 ```mermaid
@@ -167,13 +163,103 @@ Important variables:
 - `VITE_RPC_BASE_SEPOLIA`
 - `VITE_RPC_BASE_MAINNET`
 - `VITE_WALLETCONNECT_PROJECT_ID`
-- `VITE_EVM_CONTRACT_ADDRESS`
-- `VITE_EVM_CHAIN_ID_HEX`
-- `VITE_ENABLE_ONCHAIN_CAMPAIGN_CREATE`
-- `VITE_EVM_USDC_ADDRESS`
-- `VITE_EVM_USDT_ADDRESS`
 
-## Development
+Note: In production, IDs will be strings (MongoDB ObjectIds). The UI handles numeric IDs today due to localStorage seed data.
+
+## 💾 State Management & Persistence
+
+- Global state is managed in `src/context/AppContext.tsx`.
+- Seed data arrays are loaded on first run and then persisted to `localStorage` under keys:
+  - `cc_campaigns_v1`
+  - `cc_donations_v1`
+  - `cc_comments_v1`
+
+## 🔀 Routing & Deep Links
+
+- Main navigation tabs: campaigns, donate, charity, profile.
+- If the URL contains `?campaign=<id>`, the Donation modal auto-opens on mount.
+
+## 🧪 UX Flows
+
+- Create Campaign: Opens modal, preview image, basic client-side validation, stores to localStorage.
+- Donate: Opens modal, capture amount/message/method, simulates processing for non-crypto, updates state + shows thank-you.
+- Comment: Adds a comment to the selected campaign and persists to localStorage.
+
+
+## 🧭 What Privy Can and Cannot Replace
+
+For your decentralized fundraising model (crypto + fiat), Privy is a great fit for identity and wallet UX, but not a full backend replacement by itself.
+
+### Great fit for Privy / onchain
+- User sign-in (wallet, email/social if enabled in Privy).
+- Wallet management and signing UX.
+- Onchain donation flows (Base / Base Sepolia, and other EVM networks).
+
+### Still recommended offchain services (light backend or managed services)
+- Fiat payment processing (Stripe/Paystack/Ramp/etc.) + webhook verification.
+- Receipt history and searchable analytics dashboards.
+- Abuse prevention/moderation (spam comments, campaign reports).
+- Notification workflows (email receipts, campaign updates).
+
+> Short version: **Privy can replace most auth backend work**, but fiat and operational workflows still need offchain infrastructure.
+
+## 🔗 Intended Backend API Contract
+
+When connected to a backend, the UI expects REST endpoints to support these flows. Base URL example: `http://localhost:5000/api/v1`.
+
+### Auth
+- POST `/auth/register`
+- POST `/auth/login`
+- GET `/auth/me`
+- POST `/auth/logout`
+- POST `/auth/forgot-password`
+- POST `/auth/reset-password`
+- POST `/auth/connect-wallet`
+- POST `/auth/disconnect-wallet`
+
+### Campaigns
+- GET `/campaigns` — list with filters and pagination
+- GET `/campaigns/:id`
+- POST `/campaigns` — create (auth required)
+- PUT `/campaigns/:id` — update (creator only)
+- DELETE `/campaigns/:id` — delete (creator only)
+- GET `/campaigns/user/:userId` — campaigns by user
+- POST `/campaigns/:id/updates` — add update (creator)
+- GET `/campaigns/stats/overview`
+
+### Donations
+- POST `/donations` — create (auth required)
+- GET `/donations/campaign/:campaignId`
+- GET `/donations/my-donations` — current user
+- GET `/donations/:id`
+- GET `/donations/stats/overview`
+- GET `/donations/leaderboard`
+
+### Comments
+- GET `/comments/campaign/:campaignId`
+- POST `/comments/campaign/:campaignId` — create (auth required)
+- PUT `/comments/:id` — update (author)
+- DELETE `/comments/:id` — delete (author)
+- POST `/comments/:id/like` — like/unlike
+- POST `/comments/:id/report` — report
+- GET `/comments/my-comments`
+
+### Users
+- GET `/users/:id`
+- PUT `/users/profile`
+- POST `/users/avatar`
+- GET `/users/dashboard`
+- GET `/users` — admin
+- PUT `/users/:id/role` — admin
+- PUT `/users/:id/verify` — admin
+- DELETE `/users/account`
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 18+
+
+### Install & Run
 
 ```bash
 npm install
@@ -185,11 +271,4 @@ Production build:
 npm run build
 ```
 
-## Production Docs
-- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Delivery roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- Admin operations: [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md)
-- Deployment guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-- Security policy: [`docs/SECURITY.md`](docs/SECURITY.md)
-- Contributing guide: [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
-- License: [`LICENSE`](LICENSE)
+Built with ❤️ using React, Vite, and Tailwind.
