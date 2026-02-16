@@ -172,13 +172,24 @@ Important variables:
 - `VITE_ENABLE_ONCHAIN_CAMPAIGN_CREATE`
 - `VITE_EVM_USDC_ADDRESS`
 - `VITE_EVM_USDT_ADDRESS`
+- `BACKEND_PORT`
+- `JWT_SECRET`
+- `DATABASE_URL`
 
 ## Development
 
 ```bash
 npm install
 npm run validate:env
+# terminal 1
+npm run backend:dev
+# terminal 2
 npm run dev
+```
+
+Backend smoke check (optional):
+```bash
+npm run backend:health
 ```
 
 Production build:
