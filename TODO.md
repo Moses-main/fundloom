@@ -55,6 +55,7 @@
 ## 8) Docs + Developer Experience
 - [ ] Keep README progress synchronized with implemented phase slices.
 - [ ] Publish API contracts for moderation/reports/reconciliation endpoints.
+- [x] Add backend-vs-blockchain requirements matrix so contributors know which features require backend in production.
 - [x] Add env validation script for required frontend + blockchain variables.
 - [ ] Add contributor standards for lint/type/test gates and CI enforcement.
 

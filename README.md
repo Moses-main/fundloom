@@ -186,8 +186,19 @@ Production build:
 npm run build
 ```
 
+
+## Do I Really Need a Backend?
+
+Short answer: **yes for production**, optional only for limited blockchain demos.
+
+- Demo-only (no backend): wallet connect + contract calls can work, but auth/session hardening, moderation, reconciliation, and admin workflows are missing.
+- Production: backend is required for Privy session bridge, abuse controls, offchain data, and operational reliability.
+
+See [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md) for the full decision matrix.
+
 ## Production Docs
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Backend requirements matrix: [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md)
 - Delivery roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Admin operations: [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md)
 - Deployment guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
