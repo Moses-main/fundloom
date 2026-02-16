@@ -9,6 +9,9 @@ interface Props {
   categories: string[];
   categoryFilter: string;
   setCategoryFilter: (s: string) => void;
+  statusFilter: string;
+  setStatusFilter: (s: string) => void;
+  statuses: string[];
 }
 
 const SearchFilterBar: React.FC<Props> = ({
@@ -17,6 +20,9 @@ const SearchFilterBar: React.FC<Props> = ({
   categories,
   categoryFilter,
   setCategoryFilter,
+  statusFilter,
+  setStatusFilter,
+  statuses,
 }) => {
   const { setShowCreateModal } = useAppContext();
   return (
@@ -31,7 +37,7 @@ const SearchFilterBar: React.FC<Props> = ({
         />
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center flex-wrap gap-3">
         <div className="flex items-center border border-border rounded-lg px-3 py-2">
           <Filter className="h-4 w-4 mr-2" />
           <select
@@ -42,6 +48,21 @@ const SearchFilterBar: React.FC<Props> = ({
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center border border-border rounded-lg px-3 py-2">
+          <Filter className="h-4 w-4 mr-2" />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-sm bg-transparent outline-none text-foreground"
+          >
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
