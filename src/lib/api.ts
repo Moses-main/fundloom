@@ -604,6 +604,43 @@ export async function recordCryptoDonation(input: {
   });
 }
 
+export type CryptoDonationLifecycleState =
+  | "initiated"
+  | "wallet_prompt"
+  | "pending"
+  | "confirmed"
+  | "failed";
+
+type UpsertCryptoDonationTxInput = {
+  campaignId: string;
+  chainId: string;
+  state: CryptoDonationLifecycleState;
+  txHash?: string;
+  amountWei?: string;
+  from?: string;
+  message?: string;
+  idempotencyKey?: string;
+  errorMessage?: string;
+};
+
+/**
+ * Best-effort lifecycle persistence for crypto donations.
+ * Backends may implement either `/donations/crypto/tx` or `/donations/crypto` upsert semantics.
+ */
+export async function upsertCryptoDonationTx(input: UpsertCryptoDonationTxInput) {
+  try {
+    return await apiFetch<{ donation?: any }>(`/donations/crypto/tx`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return apiFetch<{ donation?: any }>(`/donations/crypto`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+}
+
 // ---------- Admin (Basic Auth) ----------
 export type BasicAuth = { basicToken: string }; // base64 of username:password
 

@@ -3,8 +3,20 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { clearAuth as clearAuthStorage } from "@/lib/api";
-import { loginWithPrivyMethod, privyLogout, type PrivyLoginMethod, type PrivyUserLike } from "@/lib/privyRuntime";
+import {
+  clearAuth as clearAuthStorage,
+  getMe,
+  logAuthEvent,
+  refreshSession,
+  verifyWalletSignature,
+  type AuthPayload,
+} from "@/lib/api";
+import {
+  loginWithPrivyMethod,
+  privyLogout,
+  type PrivyLoginMethod,
+  type PrivyUserLike,
+} from "@/lib/privyRuntime";
 
 export type AuthUser = {
   id?: string;
@@ -51,13 +63,81 @@ function extractWalletAddress(user: PrivyUserLike): string | null {
   return linkedWallet?.address || null;
 }
 
-function persistSession(token: string, normalizedUser: AuthUser, setToken: (t: string | null) => void, setUser: (u: AuthUser | null) => void, setEvmAddress: (a: string | null) => void) {
+function toAuthUserFromPayload(payloadUser: Record<string, unknown>): AuthUser {
+  const id = (payloadUser.id as string) || (payloadUser._id as string) || undefined;
+  const email = payloadUser.email as string | undefined;
+  const name = (payloadUser.name as string) || (email ? email.split("@")[0] : "User");
+  const walletAddress =
+    (payloadUser.walletAddress as string) ||
+    (Array.isArray(payloadUser.wallets)
+      ? ((payloadUser.wallets[0] as { address?: string } | undefined)?.address ?? null)
+      : null);
+
+  return {
+    id,
+    name,
+    email,
+    role: (payloadUser.role as string) || "user",
+    authProvider: "jwt",
+    walletAddress,
+    wallets: Array.isArray(payloadUser.wallets)
+      ? (payloadUser.wallets as Array<{ provider?: string; chainType?: string; address: string }>)
+      : walletAddress
+      ? [{ provider: "wallet", chainType: "evm", address: walletAddress }]
+      : [],
+  };
+}
+
+function persistSession(
+  token: string,
+  normalizedUser: AuthUser,
+  setToken: (t: string | null) => void,
+  setUser: (u: AuthUser | null) => void,
+  setEvmAddress: (a: string | null) => void
+) {
   localStorage.setItem("auth_token", token);
   localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
   setToken(token);
   setUser(normalizedUser);
   setEvmAddress(normalizedUser.walletAddress || null);
   window.dispatchEvent(new Event("auth_changed"));
+}
+
+function isInsecureWalletFallbackAllowed(): boolean {
+  if ((import.meta as { env?: { PROD?: boolean } }).env?.PROD) return false;
+  const flag =
+    (typeof import.meta !== "undefined" &&
+      (import.meta as { env?: { VITE_ALLOW_INSECURE_WALLET_SESSION?: string } }).env
+        ?.VITE_ALLOW_INSECURE_WALLET_SESSION) ||
+    "false";
+  return flag === "true";
+}
+
+function parseJwtExpMs(token: string | null): number | null {
+  if (!token || /^wallet:/.test(token)) return null;
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    if (!payload.exp) return null;
+    return payload.exp * 1000;
+  } catch {
+    return null;
+  }
+}
+
+async function auditAuthEvent(event: {
+  event: string;
+  provider?: string;
+  success: boolean;
+  message?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await logAuthEvent(event);
+  } catch {
+    // best-effort audit sink
+  }
 }
 
 export function useAuth() {
@@ -123,6 +203,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Session hardening: validate server-issued tokens on mount
+  useEffect(() => {
+    const validateSession = async () => {
+      const currentToken = localStorage.getItem("auth_token");
+      if (!currentToken) return;
+      if (!/^wallet:/.test(currentToken)) {
+        try {
+          const me = await getMe();
+          const payloadUser = (me.data?.user || {}) as Record<string, unknown>;
+          if (me?.success && payloadUser && Object.keys(payloadUser).length > 0) {
+            const normalized = toAuthUserFromPayload(payloadUser);
+            localStorage.setItem("auth_user", JSON.stringify(normalized));
+            setUser(normalized);
+          } else {
+            clearAuthStorage();
+            setToken(null);
+            setUser(null);
+          }
+        } catch {
+          clearAuthStorage();
+          setToken(null);
+          setUser(null);
+        }
+      }
+    };
+
+    validateSession();
+  }, []);
+
+  // Session hardening: refresh and expiry handling for JWT-like tokens
+  useEffect(() => {
+    const expMs = parseJwtExpMs(token);
+    if (!expMs) return;
+
+    const now = Date.now();
+    const refreshAt = expMs - 2 * 60 * 1000;
+    const refreshDelay = Math.max(0, refreshAt - now);
+    const expiryDelay = Math.max(0, expMs - now);
+
+    const refreshTimer = window.setTimeout(async () => {
+      try {
+        const refreshed = await refreshSession();
+        if (refreshed?.success && refreshed.data?.token && refreshed.data?.user) {
+          const normalized = toAuthUserFromPayload(refreshed.data.user as unknown as Record<string, unknown>);
+          persistSession(refreshed.data.token, normalized, setToken, setUser, setEvmAddress);
+          await auditAuthEvent({ event: "session_refresh", provider: "jwt", success: true });
+        }
+      } catch {
+        await auditAuthEvent({ event: "session_refresh", provider: "jwt", success: false, message: "refresh failed" });
+      }
+    }, refreshDelay);
+
+    const expiryTimer = window.setTimeout(async () => {
+      clearAuthStorage();
+      setToken(null);
+      setUser(null);
+      await auditAuthEvent({ event: "session_expired", provider: "jwt", success: true });
+      if (!location.pathname.startsWith("/auth")) {
+        navigate(`/auth?reason=expired&next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true });
+      }
+    }, expiryDelay);
+
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.clearTimeout(expiryTimer);
+    };
+  }, [token, location.pathname, location.search, navigate]);
+
   useEffect(() => {
     const eth = (window as { ethereum?: { request?: (args: { method: string }) => Promise<string[]>; on?: (event: string, handler: (accounts: string[]) => void) => void; removeListener?: (event: string, handler: (accounts: string[]) => void) => void; } }).ethereum;
     if (!eth) return;
@@ -167,9 +315,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      await privyLogout();
       clearAuthStorage();
       setToken(null);
       setUser(null);
+      await auditAuthEvent({ event: "logout", provider: user?.authProvider || "unknown", success: true });
     } finally {
       if (location.pathname !== "/") navigate("/", { replace: true });
     }
@@ -178,7 +328,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithWallet = async ({ address, signature, message, walletType }: LoginWithWalletParams) => {
     const recoveredAddress = ethers.utils.verifyMessage(message, signature);
     if (!recoveredAddress || recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+      await auditAuthEvent({ event: "wallet_login", provider: walletType, success: false, message: "local signature mismatch" });
       throw new Error("Wallet signature verification failed.");
+    }
+
+    try {
+      const verifyRes = (await verifyWalletSignature({
+        address,
+        message,
+        signature,
+      })) as { success: boolean; data?: AuthPayload; message?: string };
+
+      if (!verifyRes.success || !verifyRes.data?.token || !verifyRes.data?.user) {
+        throw new Error(verifyRes.message || "Server wallet verification failed.");
+      }
+
+      const normalizedUser = toAuthUserFromPayload(verifyRes.data.user as unknown as Record<string, unknown>);
+      persistSession(verifyRes.data.token, { ...normalizedUser, authProvider: "jwt" }, setToken, setUser, setEvmAddress);
+      await auditAuthEvent({ event: "wallet_login", provider: walletType, success: true });
+      return;
+    } catch (error) {
+      if (!isInsecureWalletFallbackAllowed()) {
+        await auditAuthEvent({ event: "wallet_login", provider: walletType, success: false, message: error instanceof Error ? error.message : "backend verify failed" });
+        const msg = error instanceof Error ? error.message : "Wallet authentication failed.";
+        throw new Error(`${msg} Enable backend /auth/wallet/verify endpoint or set VITE_ALLOW_INSECURE_WALLET_SESSION=true for local dev only.`);
+      }
     }
 
     const sessionToken = `wallet:${walletType}:${address}:${Date.now()}`;
@@ -191,12 +365,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       wallets: [{ provider: walletType, chainType: "evm", address }],
     };
 
-    localStorage.setItem("auth_token", sessionToken);
-    localStorage.setItem("auth_user", JSON.stringify(normalizedUser));
-    setToken(sessionToken);
-    setUser(normalizedUser);
-    setEvmAddress(address);
-    window.dispatchEvent(new Event("auth_changed"));
+    persistSession(sessionToken, normalizedUser, setToken, setUser, setEvmAddress);
+    await auditAuthEvent({ event: "wallet_login_insecure_fallback", provider: walletType, success: true });
+  };
+
+  const loginWithPrivy = async (method: PrivyLoginMethod) => {
+    const { token: privyToken, user: privyUser } = await loginWithPrivyMethod(method);
+    const walletAddress = extractWalletAddress(privyUser);
+
+    const normalizedUser: AuthUser = {
+      id: privyUser.id || walletAddress || `privy-${Date.now()}`,
+      name: extractEmail(privyUser)?.split("@")[0] || (walletAddress ? `Wallet ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "Privy User"),
+      email: extractEmail(privyUser),
+      role: "user",
+      authProvider: "privy",
+      walletAddress,
+      wallets: walletAddress ? [{ provider: "privy", chainType: "evm", address: walletAddress }] : [],
+    };
+
+    persistSession(privyToken, normalizedUser, setToken, setUser, setEvmAddress);
+    await auditAuthEvent({ event: "privy_login", provider: method, success: true });
   };
 
   const value: AuthContextType = {

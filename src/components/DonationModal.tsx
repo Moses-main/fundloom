@@ -31,6 +31,7 @@ import {
   postAuthDonation,
   postGuestDonation,
   recordCryptoDonation,
+  upsertCryptoDonationTx,
 } from "@/lib/api";
 import {
   donationTxStateLabel,
@@ -166,6 +167,34 @@ const DonationModal: React.FC = () => {
   const backendId =
     (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
   const { show: toast } = useToast();
+
+  const persistTxState = async (
+    state: DonationTxState,
+    params?: {
+      txHash?: string;
+      from?: string;
+      amountWei?: string;
+      errorMessage?: string;
+      idempotencyKey?: string;
+    }
+  ) => {
+    if (!backendId || state === "idle") return;
+    try {
+      await upsertCryptoDonationTx({
+        campaignId: String(backendId),
+        chainId: chainIdHexToDecString(EVM_CHAIN_ID_HEX),
+        state,
+        txHash: params?.txHash,
+        from: params?.from,
+        amountWei: params?.amountWei,
+        message: donationMessage || undefined,
+        errorMessage: params?.errorMessage,
+        idempotencyKey: params?.idempotencyKey,
+      });
+    } catch {
+      // best effort only
+    }
+  };
 
   const chainSwitchConfig = useMemo(() => {
     const env = (import.meta as any).env || {};
@@ -404,6 +433,13 @@ const DonationModal: React.FC = () => {
                 setTxError("");
                 setTxHash("");
                 setTxState("initiated");
+                const donationIdempotencyKey =
+                  typeof crypto !== "undefined" && "randomUUID" in crypto
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                await persistTxState("initiated", {
+                  idempotencyKey: donationIdempotencyKey,
+                });
 
                 const eth = (window as any).ethereum;
                 if (!eth) {
@@ -428,6 +464,10 @@ const DonationModal: React.FC = () => {
                 if (!from) throw new Error("Connect MetaMask first.");
 
                 setTxState("wallet_prompt");
+                await persistTxState("wallet_prompt", {
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
                 const signMsg = `I am donating ${donationAmount} ${token} to campaign: ${selectedCampaign.title}`;
                 await signDonationMessage(signMsg);
 
@@ -478,6 +518,11 @@ const DonationModal: React.FC = () => {
 
                 setTxHash(txHashLocal);
                 setTxState("pending");
+                await persistTxState("pending", {
+                  txHash: txHashLocal,
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
 
                 if (backendId) {
                   try {
@@ -514,6 +559,11 @@ const DonationModal: React.FC = () => {
                 }
 
                 setTxState("confirmed");
+                await persistTxState("confirmed", {
+                  txHash: txHashLocal,
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
                 toast({
                   type: "success",
                   title: "Donation sent",
@@ -530,6 +580,9 @@ const DonationModal: React.FC = () => {
               } catch (e: any) {
                 setTxState("failed");
                 setTxError(e?.message || "Please try again.");
+                await persistTxState("failed", {
+                  errorMessage: e?.message || "Donation failed",
+                });
                 toast({
                   type: "error",
                   title: "Donation failed",

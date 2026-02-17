@@ -1,32 +1,36 @@
-# FundLoom Delivery Roadmap (Excluding Fiat)
+# FundLoom Delivery Roadmap (Frontend + Blockchain, Non-Fiat)
 
-## Phase A — Auth + Session Security
-- Enforce backend-issued sessions for all login methods.
-- Disable insecure fallback in production builds.
-- Add token refresh, expiry, and revocation flows.
-- Add auth event telemetry.
+## Phase A — Privy Auth + Session Integrity
+- Ship Privy auth across wallet/social/email with unified identity linking.
+- Ensure backend-issued sessions for all auth methods.
+- Remove insecure auth fallbacks from production paths.
+- Add auth security telemetry and lockout/risk controls.
 
-## Phase B — Campaign Lifecycle Stability
-- Complete campaign moderation states and transitions.
-- Add ownership and state invariants on update/delete.
-- Add campaign update timeline feature.
+## Phase B — Cost-Efficient Onchain Architecture
+- Define strict onchain/offchain split to minimize gas:
+  - onchain only for verifiable financial state and critical references
+  - offchain for rich content and operational metadata
+- Enforce stable campaign ID mapping (backend <-> chain).
+- Add verification checks so frontend always surfaces canonical onchain references.
 
-## Phase C — Onchain Contribution Reliability
-- Implement tx orchestration states and retries.
-- Add chain confirmation reconciliation.
-- Add operator tooling for stuck tx records.
+## Phase C — Campaign Lifecycle + Donation Reliability
+- Complete lifecycle state parity across contract/backend/frontend.
+- Add robust tx orchestration and donation state machine persistence.
+- Implement chain event reconciliation + idempotent finalization.
+- Add recovery workflows for failed/stuck/mismatched transactions.
 
-## Phase D — Community + Trust
-- Harden comments and abuse/reporting controls.
-- Add campaign trust signals and transparency cards.
-- Add public report exports and donor verification views.
+## Phase D — Trust, Abuse Handling, and Transparency
+- Move moderation anti-spam policy to backend with central configuration.
+- Add report workflow lifecycle and moderator evidence trail.
+- Add campaign trust indicators and donor transparency views.
 
-## Phase E — Admin Operations
-- Admin triage queue, escalation, assignment.
-- Incident playbooks and postmortem workflow.
-- User/campaign sanctions with audit trails.
+## Phase E — Admin Operations Platform
+- Expand incident dashboard for auth/tx/moderation/reconciliation health.
+- Implement triage, assignment, SLA, escalation, and postmortem flows.
+- Add user/campaign risk controls with immutable audit logs.
 
-## Phase F — Observability + Release Quality
-- Service health dashboards and alerts.
-- E2E suite for critical journeys.
-- Release gating and rollback process.
+## Phase F — Observability, QA, and Release Quality
+- Structured logs, traces, and alerting for critical app + chain flows.
+- E2E suite for Privy auth, campaign creation, donations, and moderation/admin workflows.
+- Security and resilience tests.
+- Release gates, rollback runbook, and on-call operational docs.

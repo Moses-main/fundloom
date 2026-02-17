@@ -1,59 +1,68 @@
-# FundLoom Remaining Tasks (Non-Fiat Scope)
+# FundLoom Remaining Tasks (Frontend + Blockchain, Non-Fiat Scope)
 
-> This TODO tracks remaining production work for FundLoom and explicitly excludes fiat contribution implementation for now.
+> Product direction: **Privy auth (wallet/social/email)** + **cost-efficient onchain state**.
+> Keep rich/verbose data offchain; store only high-value verifiable records onchain.
 
-## 1) Auth & Session Hardening (carry-over)
-- [ ] Enforce server-issued session tokens for all auth paths (wallet/social/email) with no insecure fallback in production.
-- [ ] Implement refresh-token rotation + device/session revocation controls.
-- [ ] Add CSRF/session protection for web auth surfaces where needed.
-- [ ] Add comprehensive auth audit events (sign-in, failures, lockouts, resets, logout).
-- [ ] Add role/permission matrix tests for user/admin actions.
+## 1) Privy-Centric Authentication (Frontend + Backend Session Bridge)
+- [ ] Complete Privy production wiring for wallet, social, and email in auth UI + callbacks.
+- [ ] Ensure every login path resolves to a server-issued session/JWT (no insecure wallet fallback in prod).
+- [ ] Add account-linking UX (same user across wallet + social/email identities).
+- [ ] Add logout/session revocation across tabs/devices.
+- [ ] Add auth telemetry for provider success/failure, lockouts, and abuse patterns.
 
-## 2) Campaign Lifecycle Completion
-- [ ] Finalize backend/frontend campaign schema contract (status, moderation reason, archive timestamps, EVM linkage).
-- [ ] Add owner/admin lifecycle validation gates for every privileged action (UI + API parity).
-- [ ] Add moderation-state UX consistency (pending/flagged/paused/archive messaging everywhere).
-- [ ] Add campaign deactivation/reactivation edge-case handling and regression tests.
-- [ ] Add campaign updates moderation workflow (approve/reject/edit visibility states).
+## 2) Minimal-Onchain Data Model (Cost-Aware)
+- [ ] Finalize what is stored onchain vs offchain:
+  - onchain: campaign IDs, creator/beneficiary, funding state, withdrawal events, tx proofs
+  - offchain: long text, media, comments, moderation notes, analytics
+- [ ] Add deterministic linkage between backend campaign IDs and onchain campaign IDs.
+- [ ] Add integrity checks so UI always displays verified onchain references for donations/campaigns.
 
-## 3) Onchain Reliability (Non-Fiat)
-- [ ] Add backend reconciliation worker/indexer for onchain donations (event confirmation + reorg handling).
-- [ ] Implement idempotent tx ingestion and replay-safe donation finalization.
-- [ ] Persist tx state machine server-side and expose status polling endpoint.
-- [ ] Add chain mismatch recovery UX (retry/switch/explain) across all donation entry points.
-- [ ] Add robust error taxonomy and user-facing failure reasons for wallet/tx failures.
+## 3) Campaign Lifecycle (Frontend + Smart Contract + API)
+- [ ] Finish lifecycle parity across frontend/backend/contract (`pending_review`, `active`, `paused`, `completed`, `archived`, `flagged`).
+- [ ] Enforce owner/admin permissions consistently for lifecycle/media/update actions.
+- [ ] Add moderation-aware campaign updates with approval/rejection states.
+- [ ] Add end-to-end tests for archive/reactivate/flag flows.
 
-## 4) Community & Trust
-- [ ] Move anti-spam checks to backend with shared policy config (rate limits, heuristics, abuse signatures).
-- [ ] Add report case lifecycle (open/triage/investigating/resolved/rejected) tied to admin queue.
-- [ ] Add moderator notes and resolution history for reported campaigns/comments.
-- [ ] Add user-facing transparency page for moderation outcomes where appropriate.
-- [ ] Add abuse-rate monitoring and alert thresholds.
+## 4) Onchain Donation Reliability (ETH + USDC)
+- [ ] Add backend indexer/reconciliation worker for donation events and reorg safety.
+- [ ] Implement idempotent donation finalization and replay protection.
+- [x] Persist tx state machine server-side (`initiated`, `wallet_prompt`, `pending`, `confirmed`, `failed`) via frontend upsert hooks (backend endpoint rollout in progress).
+- [ ] Add robust chain mismatch recovery UX and retry guidance in frontend.
 
-## 5) Admin Features (Track + Resolve Platform Issues)
-- [ ] Build admin incident dashboard (auth failures, tx failures, moderation queue, API health).
-- [ ] Implement case assignment, SLA timers, and escalation paths.
-- [ ] Add campaign risk controls with auditable reasons (flag/pause/re-verify/remove/restore).
-- [ ] Add user risk controls (warn/restrict/suspend/reinstate) with immutable audit logs.
-- [ ] Add exportable incident/postmortem reports.
+## 5) Trust, Reporting, and Moderation
+- [ ] Move anti-spam logic from client-only checks to backend policy engine (rate limits + heuristics).
+- [ ] Implement full abuse case lifecycle (open/triage/investigating/resolved/rejected).
+- [ ] Add moderator notes, evidence links, and immutable action/audit trail.
+- [ ] Add donor-facing trust/transparency surfaces (campaign health + resolution outcomes where appropriate).
 
-## 6) Observability, QA, and Release Readiness
-- [ ] Add structured logging and request tracing across auth/campaign/donation/admin flows.
-- [ ] Add metrics dashboards + alerts (latency, error rates, tx confirmation lag, moderation backlog).
-- [ ] Add end-to-end tests for critical journeys (auth, create campaign, donate crypto, report abuse, admin resolution).
-- [ ] Add security test suite (auth/session misuse, permission bypass, abuse/report tampering).
-- [ ] Add production release checklist + rollback runbook + on-call handoff template.
+## 6) Admin Operations (Issue Tracking + Resolution)
+- [ ] Expand incident dashboard (auth failures, tx failures, reconciliation lag, moderation backlog, API health).
+- [ ] Add assignment + SLA timers + escalation workflow.
+- [ ] Add campaign risk controls (flag/pause/re-verify/remove/restore) with reason history.
+- [ ] Add user risk controls (warn/restrict/suspend/reinstate) with audit logs.
 
-## 7) Documentation & Developer Experience
-- [ ] Keep README roadmap progress synchronized with completed phases.
-- [ ] Add API contracts for new moderation/reporting endpoints.
-- [ ] Add runbooks for tx reconciliation failures and moderation incidents.
-- [ ] Add contribution standards for tests, lint baselines, and CI quality gates.
-- [ ] Add environment validation script for required Vite/backend variables.
+## 7) Observability, QA, and Release Engineering
+- [ ] Add structured logs + traces across auth, campaign, donation, and moderation flows.
+- [ ] Add dashboards/alerts for chain confirmation lag and failed tx finalization.
+- [ ] Add E2E coverage for critical journeys:
+  - Privy auth (wallet/social/email)
+  - create campaign (offchain + optional onchain sync)
+  - donate ETH/USDC
+  - report abuse + admin resolution
+- [ ] Add security tests for auth/session misuse and permission bypass.
+- [ ] Add release checklist + rollback runbook + on-call playbook.
+
+## 8) Docs + Developer Experience
+- [x] Add Node.js + Express backend scaffold with health/auth/campaigns/crypto-tx upsert routes for local integration.
+- [ ] Keep README progress synchronized with implemented phase slices.
+- [ ] Publish API contracts for moderation/reports/reconciliation endpoints.
+- [x] Add backend-vs-blockchain requirements matrix so contributors know which features require backend in production.
+- [x] Add env validation script for required frontend + blockchain variables.
+- [ ] Add contributor standards for lint/type/test gates and CI enforcement.
 
 ## Suggested Execution Order
-1. Close remaining Auth hardening gaps.
-2. Complete campaign lifecycle parity and moderation-state consistency.
-3. Ship backend tx reconciliation + idempotent finalization.
-4. Expand moderation into full admin case management.
-5. Finalize observability, QA automation, and release controls.
+1. Privy production auth + server session guarantees.
+2. Minimal-onchain model + campaign ID linkage invariants.
+3. Donation reconciliation + idempotent tx finalization.
+4. Full moderation/admin case management.
+5. Observability + E2E + release hardening.
