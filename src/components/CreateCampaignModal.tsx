@@ -156,6 +156,8 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { createCampaign, uploadImage } from "../lib/api";
+import { createCampaignOnchain, requireChain } from "@/lib/evm";
+import { EVM_CHAIN_ID_HEX, EVM_CONTRACT_ADDRESS } from "@/utils/constant";
 import { useToast } from "./ui/ToastProvider";
 
 const CreateCampaignModal: React.FC = () => {
@@ -178,6 +180,13 @@ const CreateCampaignModal: React.FC = () => {
   const { show: toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  const env = (import.meta as any).env || {};
+  const onchainCreateEnabled =
+    String(env.VITE_ENABLE_ONCHAIN_CAMPAIGN_CREATE || "false").toLowerCase() ===
+    "true";
+  const isValidEthAddress = (value?: string | null) =>
+    !!value && /^0x[a-fA-F0-9]{40}$/.test(value);
 
   const handleImageUpload = (file?: File) => {
     if (!file) return;
@@ -368,6 +377,77 @@ const CreateCampaignModal: React.FC = () => {
       return;
     }
 
+    // Optional onchain campaign creation (does not block backend success)
+    let onchainCampaignId: string | null = null;
+    let onchainTxHash: string | null = null;
+    if (onchainCreateEnabled) {
+      try {
+        const charityAddress =
+          (backendCampaign.charityAddress as string) ||
+          (newCharityAddress || "").trim() ||
+          userAddress;
+
+        if (!isValidEthAddress(charityAddress)) {
+          throw new Error(
+            "Missing valid charity wallet address for onchain creation."
+          );
+        }
+        if (!isValidEthAddress(EVM_CONTRACT_ADDRESS)) {
+          throw new Error(
+            "VITE_EVM_CONTRACT_ADDRESS is required for onchain campaign creation."
+          );
+        }
+
+        const deadlineUnixSeconds = Math.floor(
+          new Date(backendCampaign.deadline || deadlineIso).getTime() / 1000
+        );
+
+        await requireChain(EVM_CHAIN_ID_HEX, {
+          rpcUrls:
+            EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+              ? env.VITE_RPC_BASE_SEPOLIA
+                ? [String(env.VITE_RPC_BASE_SEPOLIA)]
+                : undefined
+              : env.VITE_RPC_BASE_MAINNET
+                ? [String(env.VITE_RPC_BASE_MAINNET)]
+                : undefined,
+          chainName:
+            EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+              ? "Base Sepolia"
+              : "Base",
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          blockExplorerUrls:
+            EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+              ? ["https://sepolia.basescan.org"]
+              : ["https://basescan.org"],
+        });
+
+        const onchain = await createCampaignOnchain({
+          contractAddress: EVM_CONTRACT_ADDRESS,
+          charity: charityAddress,
+          targetAmountUsd: Number(backendCampaign.targetAmount || targetNum),
+          deadlineUnixSeconds,
+        });
+
+        onchainCampaignId = onchain.campaignId;
+        onchainTxHash = onchain.txHash;
+
+        toast({
+          type: "success",
+          title: "Onchain campaign synced",
+          description: `Tx: ${onchain.txHash.slice(0, 10)}...`,
+        });
+      } catch (e: any) {
+        toast({
+          type: "warning",
+          title: "Backend campaign created, onchain sync pending",
+          description:
+            e?.message ||
+            "Could not create the onchain campaign right now. You can retry from admin tooling.",
+        });
+      }
+    }
+
     // Map backend campaign into local Campaign shape and update state
     const campaign = {
       id: Date.now(),
@@ -389,6 +469,11 @@ const CreateCampaignModal: React.FC = () => {
           : []
       ),
       backendId: backendCampaign._id,
+      evm: {
+        ...(backendCampaign.evm || {}),
+        campaignId: onchainCampaignId || backendCampaign?.evm?.campaignId || null,
+        txHash: onchainTxHash || null,
+      },
     } as any;
     setCampaigns((prev: any) => [campaign, ...prev]);
     setNewTitle("");
@@ -401,7 +486,9 @@ const CreateCampaignModal: React.FC = () => {
     toast({
       type: "success",
       title: "Campaign created",
-      description: "Your campaign has been created successfully.",
+      description: onchainTxHash
+        ? `Campaign created and synced onchain (tx ${onchainTxHash.slice(0, 10)}...).`
+        : "Your campaign has been created successfully.",
     });
     // Redirect to dashboard with campaigns tab active
     navigate("/dashboard?tab=campaigns", { replace: true });

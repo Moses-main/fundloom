@@ -1,186 +1,219 @@
-# FundLoom Frontend (Vite + React)
+# FundLoom
 
-A modern single-page application that showcases charity campaigns, accepts donations, displays leaderboards and comments, and provides a polished UX with modals and theming. The current frontend uses localStorage as its data source but is designed to work with a REST backend.
+FundLoom is a decentralized fundraising platform focused on transparent campaign creation and contribution tracking, with wallet-first onboarding and progressive Privy authentication (wallet, social, email).
 
-## 🌟 Features
+> Scope note: this roadmap intentionally **excludes fiat contribution implementation** for now, per current product direction.
 
-- **Campaign Browsing**: Grid/list of campaigns with stats, progress bars, days left, and templates.
-- **Campaign Details**: View description, funds usage breakdown, donor list, and comments.
-- **Donations**: Donation modal with amount, message, and payment method selection (crypto/card/bank/mobile).
-- **Create Campaign**: Modal to create a new campaign with title, description, target, category, template, and optional image.
-- **Comments**: Add comments on campaigns and view existing discussion.
-- **Leaderboard**: Aggregated donor totals and counts.
-- **Wallet Mock**: Simulated wallet connect/disconnect for demo UX.
-- **Deep-links**: Auto-open donation modal via `?campaign=<id>` query param.
-- **Responsive UI**: Built with modern UI components and Tailwind CSS.
+## Table of Contents
+- [Vision](#vision)
+- [Current State](#current-state)
+- [Remaining Tasks (Production Readiness Backlog)](#remaining-tasks-production-readiness-backlog)
+- [Architecture](#architecture)
+- [Flow Diagrams](#flow-diagrams)
+- [Admin Operations Scope](#admin-operations-scope)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [Development](#development)
+- [Production Docs](#production-docs)
 
-## 🧰 Tech Stack
+## Vision
+- Empower creators to launch verifiable campaigns.
+- Allow donors to contribute via crypto rails with auditable outcomes.
+- Provide admin tooling for moderation, incident response, and platform health.
 
-- React 19 + TypeScript
-- Vite 7
-- Tailwind CSS 4
-- React Router DOM 7
-- Radix UI primitives
+## Current State
+- Frontend: React + TypeScript + Vite.
+- Auth: Privy runtime integration and wallet flow present, with backend-verified wallet session hardening in place.
+- Data: campaign/donation/comment flows still partially backend-dependent.
+- Admin: basic admin pages exist, but require production hardening and expanded operational tooling.
 
-See `package.json` for full dependency list.
+## Remaining Tasks (Production Readiness Backlog)
 
-## 🗂️ Project Structure
+## Roadmap Execution Progress
 
+- ✅ **Phase 1 (started): Security & Auth Hardening**
+  - ✅ Backend-verified wallet session enforcement by default.
+  - ✅ JWT startup validation (`/auth/me`) and stale-session clearing.
+  - ✅ Token expiry/refresh scheduling hooks added on the client.
+  - ✅ Auth audit event hooks added (best-effort API logging).
+- ✅ **Phase 2 (in progress): Core Campaign Lifecycle**
+  - ✅ Standardized backend→frontend lifecycle status mapping (`pending_review`, `active`, `paused`, `completed`, `archived`, `flagged`).
+  - ✅ Added lifecycle-aware campaign filtering in campaigns page.
+  - ✅ Tightened owner/admin controls for campaign image management actions and backend-safe update IDs.
+  - ✅ Added campaign updates timeline ingestion + owner/admin posting flow on report page.
+  - ✅ Added owner/admin lifecycle controls (pause, reactivate, archive) in campaign report workflow.
+- 🔄 **Phase 3 (started): Onchain Contribution Reliability (Non-fiat)**
+  - ✅ Added donation transaction state machine UX (`initiated`, `wallet_prompt`, `pending`, `confirmed`, `failed`) in donation modal flow.
+  - ✅ Added explicit chain/network guardrails with guided wallet network switching to configured EVM chain before submit.
+  - ✅ Added best-effort backend crypto donation reconciliation hook using tx hash after on-chain submission.
+  - ✅ Wired frontend smart-contract interactions for `createCampaign` (optional toggle), `donate`, and token allowance checks.
+- ⏳ Remaining Phase 3+ items pending.
+- 🔄 **Phase 4 (started): Community & Trust**
+  - ✅ Added discussion anti-spam controls (client-side suspicious-content checks, char limit, post cooldown).
+  - ✅ Added campaign-level and comment-level abuse reporting actions wired to moderation API hooks.
+- 🔄 **Phase 5 (started): Admin Features (Track + Resolve Platform Issues)**
+  - ✅ Added admin incident snapshot cards (pending reviews, inactive campaigns, locked users, open reports).
+  - ✅ Added admin moderation queue UI with resolve/reject case actions (backend endpoint-ready).
+- ⏳ Remaining Phase 5+ items pending.
+- 🔄 **Phase 6 (started): Observability, QA, and Release**
+  - ✅ Added frontend blockchain/auth environment validation script (`npm run validate:env`).
+- ⏳ Remaining Phase 6+ items pending.
+
+
+### Phase 1 — Privy Auth + Session Integrity
+- [ ] Complete production Privy integration for wallet/social/email sign-in and account linking.
+- [ ] Enforce backend-issued sessions/JWTs for all auth providers with no insecure fallback in production.
+- [ ] Add refresh/revocation/session-expiry controls and auth event telemetry.
+
+### Phase 2 — Cost-Efficient Onchain Data Strategy
+- [ ] Lock the onchain/offchain split so only verifiable financial state is stored onchain.
+- [ ] Finalize backend-to-chain campaign ID mapping and verification checks in frontend.
+- [ ] Keep rich content (descriptions/media/comments/moderation notes) offchain to reduce gas cost.
+
+### Phase 3 — Campaign Lifecycle + Onchain Reliability (Non-fiat)
+- [ ] Complete lifecycle parity across frontend/backend/contract.
+- [ ] Add server-side tx state persistence and idempotent donation finalization.
+- [ ] Add reconciliation/indexing for chain events with reorg-safe handling.
+- [ ] Harden chain mismatch/retry UX for wallet transactions.
+
+### Phase 4 — Community, Trust, and Moderation
+- [ ] Move anti-spam/reporting policy to backend enforcement.
+- [ ] Add full report workflow (open/triage/investigating/resolved/rejected).
+- [ ] Add moderator notes/evidence and donor-facing transparency summaries.
+
+### Phase 5 — Admin Operations
+- [ ] Expand incident dashboard (auth, tx, moderation, reconciliation, API health).
+- [ ] Add case assignment, SLA timers, escalation, and postmortem workflows.
+- [ ] Add user/campaign risk controls with full audit history.
+
+### Phase 6 — Observability, QA, and Release
+- [ ] Structured logs + tracing across auth/campaign/donation/moderation flows.
+- [ ] Uptime/error dashboards + alerting.
+- [ ] E2E and security coverage for critical workflows.
+- [ ] Release checklist + rollback runbook.
+
+## Architecture
+
+See full architecture in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+### High-Level Components
+- **Frontend SPA**: routing, UI state, auth entry, campaign UX.
+- **Auth Layer**: Privy runtime + backend verification/session issuance.
+- **Backend API**: campaigns, donations, comments, admin controls.
+- **Blockchain Layer**: transaction submission and confirmation.
+- **Admin Control Plane**: moderation + issue resolution workflows.
+
+## Flow Diagrams
+
+### 1) Authentication Flow
+```mermaid
+flowchart LR
+  U[User] --> A[Auth Page]
+  A --> P[Privy Login Method\nWallet/Social/Email]
+  P --> B[Backend Verify/Session Issue]
+  B --> S[Persist auth_token/auth_user]
+  S --> D[Dashboard/Campaign Access]
 ```
-frontend/
-└── src/
-    ├── App.tsx, entireApp.tsx         # App shells and alternate layout
-    ├── components/                    # UI components and modals
-    ├── pages/                         # Views (Dashboard, Auth, etc.)
-    ├── context/AppContext.tsx         # Global state (campaigns, donations, comments)
-    ├── styles/, assets/, utils/       # Styling, assets, helpers
-    ├── main.tsx, layout.tsx           # Vite/React bootstrap
-    └── global.css, index.css          # Global styles
+
+### 2) Campaign Contribution Flow (Non-fiat)
+```mermaid
+flowchart LR
+  U[Donor] --> C[Select Campaign]
+  C --> W[Wallet Transaction]
+  W --> X[Chain Confirmation]
+  X --> R[Record Donation + Update Stats]
+  R --> T[Thank You + Report View]
 ```
 
-## 🔢 Data Model (Frontend)
-
-Types used across the UI (see `src/context/AppContext.tsx`):
-
-```ts
-type PaymentMethod = 'crypto' | 'card' | 'bank' | 'mobile';
-
-interface Campaign {
-  id: number;
-  charity_address: string;
-  title: string;
-  description: string;
-  target_amount: number;
-  raised_amount: number;
-  deadline: number; // epoch ms
-  is_active: boolean;
-  created_at: number; // epoch ms
-  total_donors: number;
-  image?: string | null;
-  category?: string;
-  template?: 'default' | 'impact' | 'medical' | 'creative';
-  funds_used?: Record<string, number>;
-}
-
-interface Donation {
-  id: number;
-  donor_address: string;
-  donor_name?: string;
-  campaign_id: number;
-  amount: number;
-  timestamp: number; // epoch ms
-  donor_message: string;
-  payment_method: PaymentMethod;
-}
-
-interface Comment {
-  id: number;
-  campaign_id: number;
-  author: string;
-  message: string;
-  timestamp: number; // epoch ms
-}
+### 3) Admin Issue Resolution Flow
+```mermaid
+flowchart LR
+  E[Platform Event\nSpam/Abuse/Failure] --> Q[Admin Queue]
+  Q --> I[Investigate]
+  I --> A[Action\nWarn/Pause/Suspend/Resolve]
+  A --> L[Audit Log]
+  L --> C[Close Case]
 ```
 
-Note: In production, IDs will be strings (MongoDB ObjectIds). The UI handles numeric IDs today due to localStorage seed data.
+## Admin Operations Scope
 
-## 💾 State Management & Persistence
+See [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md) for:
+- Incident tracking model
+- Moderation SLA expectations
+- Resolution workflow and audit requirements
 
-- Global state is managed in `src/context/AppContext.tsx`.
-- Seed data arrays are loaded on first run and then persisted to `localStorage` under keys:
-  - `cc_campaigns_v1`
-  - `cc_donations_v1`
-  - `cc_comments_v1`
+## Project Structure
 
-## 🔀 Routing & Deep Links
+```txt
+src/
+  components/       UI components and feature widgets
+  context/          Auth and app state providers
+  lib/              API clients, runtime integrations, utilities
+  pages/            Route-level pages
+  services/         Service-layer logic
+  types/            Shared TypeScript contracts
+```
 
-- Main navigation tabs: campaigns, donate, charity, profile.
-- If the URL contains `?campaign=<id>`, the Donation modal auto-opens on mount.
+## Environment Variables
 
-## 🧪 UX Flows
+Use `.env.example` as template.
 
-- Create Campaign: Opens modal, preview image, basic client-side validation, stores to localStorage.
-- Donate: Opens modal, capture amount/message/method, simulates processing for non-crypto, updates state + shows thank-you.
-- Comment: Adds a comment to the selected campaign and persists to localStorage.
+Important variables:
+- `VITE_PRIVY_APP_ID`
+- `VITE_PRIVY_JS_SDK_URL`
+- `VITE_ALLOW_INSECURE_WALLET_SESSION` (dev-only fallback; keep `false` in production)
+- `VITE_API_BASE_URL`
+- `VITE_DEFAULT_CHAIN`
+- `VITE_RPC_BASE_SEPOLIA`
+- `VITE_RPC_BASE_MAINNET`
+- `VITE_WALLETCONNECT_PROJECT_ID`
+- `VITE_EVM_CONTRACT_ADDRESS`
+- `VITE_EVM_CHAIN_ID_HEX`
+- `VITE_ENABLE_ONCHAIN_CAMPAIGN_CREATE`
+- `VITE_EVM_USDC_ADDRESS`
+- `VITE_EVM_USDT_ADDRESS`
+- `BACKEND_PORT`
+- `JWT_SECRET`
+- `DATABASE_URL`
 
-## 🔗 Intended Backend API Contract
-
-When connected to a backend, the UI expects REST endpoints to support these flows. Base URL example: `http://localhost:5000/api/v1`.
-
-### Auth
-- POST `/auth/register`
-- POST `/auth/login`
-- GET `/auth/me`
-- POST `/auth/logout`
-- POST `/auth/forgot-password`
-- POST `/auth/reset-password`
-- POST `/auth/connect-wallet`
-- POST `/auth/disconnect-wallet`
-
-### Campaigns
-- GET `/campaigns` — list with filters and pagination
-- GET `/campaigns/:id`
-- POST `/campaigns` — create (auth required)
-- PUT `/campaigns/:id` — update (creator only)
-- DELETE `/campaigns/:id` — delete (creator only)
-- GET `/campaigns/user/:userId` — campaigns by user
-- POST `/campaigns/:id/updates` — add update (creator)
-- GET `/campaigns/stats/overview`
-
-### Donations
-- POST `/donations` — create (auth required)
-- GET `/donations/campaign/:campaignId`
-- GET `/donations/my-donations` — current user
-- GET `/donations/:id`
-- GET `/donations/stats/overview`
-- GET `/donations/leaderboard`
-
-### Comments
-- GET `/comments/campaign/:campaignId`
-- POST `/comments/campaign/:campaignId` — create (auth required)
-- PUT `/comments/:id` — update (author)
-- DELETE `/comments/:id` — delete (author)
-- POST `/comments/:id/like` — like/unlike
-- POST `/comments/:id/report` — report
-- GET `/comments/my-comments`
-
-### Users
-- GET `/users/:id`
-- PUT `/users/profile`
-- POST `/users/avatar`
-- GET `/users/dashboard`
-- GET `/users` — admin
-- PUT `/users/:id/role` — admin
-- PUT `/users/:id/verify` — admin
-- DELETE `/users/account`
-
-## 🛠️ Development
-
-### Prerequisites
-- Node.js 18+
-
-### Install & Run
+## Development
 
 ```bash
-cd frontend
 npm install
+npm run validate:env
+# terminal 1
+npm run backend:dev
+# terminal 2
 npm run dev
 ```
 
-The dev server runs on Vite’s default port (usually 5173).
+Backend smoke check (optional):
+```bash
+npm run backend:health
+```
 
-## 🎨 Theming
+Production build:
+```bash
+npm run build
+```
 
-- Theme provider and Radix UI used across components.
-- Tailwind CSS for utility-first styling.
 
-## ✅ Roadmap
+## Do I Really Need a Backend?
 
-- Replace localStorage with real API calls.
-- Add API service layer with fetch/axios.
-- Hook wallet connect to backend `/auth/connect-wallet`.
-- File uploads for campaign images and user avatars.
+Short answer: **yes for production**, optional only for limited blockchain demos.
 
----
+- Demo-only (no backend): wallet connect + contract calls can work, but auth/session hardening, moderation, reconciliation, and admin workflows are missing.
+- Production: backend is required for Privy session bridge, abuse controls, offchain data, and operational reliability.
 
-Built with ❤️ using React, Vite, and Tailwind.
+See [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md) for the full decision matrix.
+
+## Production Docs
+- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Backend requirements matrix: [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md)
+- Delivery roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Admin operations: [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md)
+- API contracts: [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md)
+- Deployment guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- Security policy: [`docs/SECURITY.md`](docs/SECURITY.md)
+- Contributing guide: [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+- License: [`LICENSE`](LICENSE)

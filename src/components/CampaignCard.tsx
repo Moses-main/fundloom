@@ -13,6 +13,7 @@ import { uploadImage, updateCampaign, postCampaignWithdraw } from "../lib/api";
 import { getCampaignDetails } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { lifecycleLabel } from "@/lib/campaignLifecycle";
 
 const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   const {
@@ -30,6 +31,15 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const creatorId = (campaign as any).creatorId;
+  const userId = (user as any)?.id || (user as any)?._id;
+  const isOwner = !!userId && !!creatorId && String(userId) === String(creatorId);
+  const isAdmin = String((user as any)?.role || "").toLowerCase() === "admin";
+  const canManageCampaign = isOwner || isAdmin;
+  const lifecycle = lifecycleLabel(
+    (campaign as any).lifecycle_status || (campaign.is_active ? "active" : "paused")
+  );
 
   const onUploadClick = () => fileRef.current?.click();
 
@@ -53,6 +63,14 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         });
         return;
       }
+      if (!canManageCampaign) {
+        toast({
+          type: "warning",
+          title: "Not allowed",
+          description: "Only campaign owners or admins can update campaign media.",
+        });
+        return;
+      }
       const token = localStorage.getItem("auth_token") || undefined;
       if (!token) {
         toast({
@@ -72,7 +90,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
           );
           const newUrl = (up as any)?.data?.url;
           if (!newUrl) throw new Error("Upload failed");
-          await updateCampaign(String(campaign.id), { image: newUrl }, token);
+          const backendId = (campaign as any).backendId || (campaign as any)._id;
+          if (!backendId) throw new Error("Campaign is not synced with backend");
+          await updateCampaign(String(backendId), { image: newUrl }, token);
           setCampaigns((prev: Campaign[]) =>
             prev.map((c) =>
               c.id === campaign.id ? { ...c, image: newUrl } : c
@@ -104,6 +124,14 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
   };
 
   const handleRemoveImage = async () => {
+    if (!canManageCampaign) {
+      toast({
+        type: "warning",
+        title: "Not allowed",
+        description: "Only campaign owners or admins can remove campaign media.",
+      });
+      return;
+    }
     const token = localStorage.getItem("auth_token") || undefined;
     if (!token) {
       toast({
@@ -114,7 +142,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       return;
     }
     try {
-      await updateCampaign(String(campaign.id), { image: null }, token);
+      const backendId = (campaign as any).backendId || (campaign as any)._id;
+      if (!backendId) throw new Error("Campaign is not synced with backend");
+      await updateCampaign(String(backendId), { image: null }, token);
       setCampaigns((prev: Campaign[]) =>
         prev.map((c) => (c.id === campaign.id ? { ...c, image: null } : c))
       );
@@ -164,13 +194,13 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         <div className="absolute top-3 right-3 flex items-center gap-2">
           <button
             type="button"
-            onClick={onUploadClick}
-            className="px-3 py-1.5 text-xs rounded-full bg-white/90 dark:bg-gray-900/80 border border-border hover:bg-white dark:hover:bg-gray-900"
-            title="Upload image"
+            onClick={canManageCampaign ? onUploadClick : undefined}
+            className={`px-3 py-1.5 text-xs rounded-full border ${canManageCampaign ? "bg-white/90 dark:bg-gray-900/80 border-border hover:bg-white dark:hover:bg-gray-900" : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"}` }
+            title={canManageCampaign ? "Upload image" : "Only campaign owner or admin can upload"}
           >
-            Upload
+            {canManageCampaign ? "Upload" : "Owner/Admin only"}
           </button>
-          {campaign.image && (
+          {campaign.image && canManageCampaign && (
             <button
               type="button"
               onClick={handleRemoveImage}
@@ -188,6 +218,11 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-2">
           {campaign.title}
         </h3>
+        <div className="mb-3">
+          <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium bg-muted/50">
+            {lifecycle}
+          </span>
+        </div>
         <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
           {campaign.description}
         </p>
@@ -311,14 +346,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
 
           {(() => {
             // Owner-only donors button
-            const creatorId = (campaign as any).creatorId;
             const backendId =
               (campaign as any).backendId || (campaign as any)._id;
-            const isOwner =
-              !!user?.id &&
-              !!creatorId &&
-              String(user.id) === String(creatorId);
-            if (!isOwner) return null;
+            if (!canManageCampaign) return null;
             return (
               <button
                 type="button"
@@ -346,14 +376,9 @@ const CampaignCard: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
 
           {(() => {
             // Owner-only withdraw button
-            const creatorId = (campaign as any).creatorId;
             const backendId =
               (campaign as any).backendId || (campaign as any)._id;
-            const isOwner =
-              !!user?.id &&
-              !!creatorId &&
-              String(user.id) === String(creatorId);
-            if (!isOwner) return null;
+            if (!canManageCampaign) return null;
 
             const goalMet =
               Number(campaign.raised_amount) >= Number(campaign.target_amount);
