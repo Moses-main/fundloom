@@ -212,6 +212,7 @@ See [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md) for the full 
 - Backend requirements matrix: [`docs/BACKEND_REQUIREMENTS.md`](docs/BACKEND_REQUIREMENTS.md)
 - Delivery roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Admin operations: [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md)
+- API contracts: [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md)
 - Deployment guide: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Security policy: [`docs/SECURITY.md`](docs/SECURITY.md)
 - Contributing guide: [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)

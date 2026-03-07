@@ -9,6 +9,7 @@ import {
   logAuthEvent,
   refreshSession,
   verifyWalletSignature,
+  verifyPrivyAuth,
   type AuthPayload,
 } from "@/lib/api";
 import {
@@ -353,6 +354,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const msg = error instanceof Error ? error.message : "Wallet authentication failed.";
         throw new Error(`${msg} Enable backend /auth/wallet/verify endpoint or set VITE_ALLOW_INSECURE_WALLET_SESSION=true for local dev only.`);
       }
+    }
+
+    const sessionToken = `wallet:${walletType}:${address}:${Date.now()}`;
+    const normalizedUser: AuthUser = {
+      id: address.toLowerCase(),
+      name: `Wallet ${address.slice(0, 6)}...${address.slice(-4)}`,
+      role: "user",
+      authProvider: "wallet",
+      walletAddress: address,
+      wallets: [{ provider: walletType, chainType: "evm", address }],
+    };
+
+    persistSession(sessionToken, normalizedUser, setToken, setUser, setEvmAddress);
+    await auditAuthEvent({ event: "wallet_login_insecure_fallback", provider: walletType, success: true });
+  };
+
+  const loginWithPrivy = async (method: PrivyLoginMethod) => {
+    const { token: privyToken, user: privyUser } = await loginWithPrivyMethod(method);
+    const walletAddress = extractWalletAddress(privyUser);
+
+    try {
+      const verifyRes = await verifyPrivyAuth({
+        sub: privyUser.id,
+        userId: privyUser.id,
+        email: extractEmail(privyUser),
+        name:
+          extractEmail(privyUser)?.split("@")[0] ||
+          (walletAddress
+            ? `Wallet ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+            : "Privy User"),
+        provider: method,
+        token: privyToken,
+      });
+
+      if (!verifyRes.success || !verifyRes.data?.token || !verifyRes.data?.user) {
+        throw new Error(verifyRes.message || "Server Privy verification failed.");
+      }
+
+      const normalizedUser = {
+        ...toAuthUserFromPayload(verifyRes.data.user as unknown as Record<string, unknown>),
+        authProvider: "privy" as const,
+        walletAddress,
+        wallets: walletAddress
+          ? [{ provider: "privy", chainType: "evm" as const, address: walletAddress }]
+          : [],
+      };
+
+      persistSession(
+        verifyRes.data.token,
+        normalizedUser,
+        setToken,
+        setUser,
+        setEvmAddress
+      );
+      await auditAuthEvent({ event: "privy_login", provider: method, success: true });
+      return;
+    } catch (error) {
+      await auditAuthEvent({
+        event: "privy_login",
+        provider: method,
+        success: false,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      throw error instanceof Error
+        ? error
+        : new Error("Privy authentication failed.");
     }
 
     const sessionToken = `wallet:${walletType}:${address}:${Date.now()}`;
