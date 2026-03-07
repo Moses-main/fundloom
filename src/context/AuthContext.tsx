@@ -421,6 +421,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? error
         : new Error("Privy authentication failed.");
     }
+
+    const sessionToken = `wallet:${walletType}:${address}:${Date.now()}`;
+    const normalizedUser: AuthUser = {
+      id: address.toLowerCase(),
+      name: `Wallet ${address.slice(0, 6)}...${address.slice(-4)}`,
+      role: "user",
+      authProvider: "wallet",
+      walletAddress: address,
+      wallets: [{ provider: walletType, chainType: "evm", address }],
+    };
+
+    persistSession(sessionToken, normalizedUser, setToken, setUser, setEvmAddress);
+    await auditAuthEvent({ event: "wallet_login_insecure_fallback", provider: walletType, success: true });
+  };
+
+  const loginWithPrivy = async (method: PrivyLoginMethod) => {
+    const { token: privyToken, user: privyUser } = await loginWithPrivyMethod(method);
+    const walletAddress = extractWalletAddress(privyUser);
+
+    const normalizedUser: AuthUser = {
+      id: privyUser.id || walletAddress || `privy-${Date.now()}`,
+      name: extractEmail(privyUser)?.split("@")[0] || (walletAddress ? `Wallet ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "Privy User"),
+      email: extractEmail(privyUser),
+      role: "user",
+      authProvider: "privy",
+      walletAddress,
+      wallets: walletAddress ? [{ provider: "privy", chainType: "evm", address: walletAddress }] : [],
+    };
+
+    persistSession(privyToken, normalizedUser, setToken, setUser, setEvmAddress);
+    await auditAuthEvent({ event: "privy_login", provider: method, success: true });
   };
 
   const value: AuthContextType = {
