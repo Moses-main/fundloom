@@ -180,3 +180,31 @@ export async function requireChain(
     throw e;
   }
 }
+
+
+export async function createCampaignOnchain(params: {
+  contractAddress: string;
+  charity: string;
+  targetAmountUsd: number;
+  deadlineUnixSeconds: number;
+}): Promise<{ txHash: string; campaignId: string | null }> {
+  const provider = await ensureProvider();
+  const signer = await provider.getSigner();
+  const contract = new Contract(params.contractAddress, ABI as any, signer);
+
+  const charity = getAddress(params.charity);
+  const targetAmount = BigInt(Math.round(Number(params.targetAmountUsd)));
+  const deadline = BigInt(params.deadlineUnixSeconds);
+
+  const tx = await contract.createCampaign(charity, targetAmount, deadline);
+  const receipt = await tx.wait();
+
+  let campaignId: string | null = null;
+  try {
+    const event = receipt?.events?.find((e: any) => e?.event === "CampaignCreated");
+    const idArg = event?.args?.id;
+    if (idArg != null) campaignId = String(idArg.toString());
+  } catch {}
+
+  return { txHash: receipt?.hash || tx.hash, campaignId };
+}

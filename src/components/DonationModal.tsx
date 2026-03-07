@@ -7,6 +7,9 @@ import {
   Banknote,
   Smartphone,
   CheckCircle,
+  Loader2,
+  AlertTriangle,
+  Clock3,
 } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
@@ -24,7 +27,16 @@ import {
   EVM_USDC_ADDRESS,
   EVM_USDT_ADDRESS,
 } from "@/utils/constant";
-import { postAuthDonation, postGuestDonation } from "@/lib/api";
+import {
+  postAuthDonation,
+  postGuestDonation,
+  recordCryptoDonation,
+  upsertCryptoDonationTx,
+} from "@/lib/api";
+import {
+  donationTxStateLabel,
+  type DonationTxState,
+} from "@/lib/txLifecycle";
 
 const PaymentMethodSelector: React.FC = () => {
   const { selectedPayment, setSelectedPayment } = useAppContext();
@@ -86,6 +98,42 @@ const PaymentMethodSelector: React.FC = () => {
   );
 };
 
+const chainIdHexToDecString = (hex: string) => {
+  try {
+    return BigInt(hex).toString();
+  } catch {
+    return "0";
+  }
+};
+
+const txStateMeta = (state: DonationTxState) => {
+  switch (state) {
+    case "initiated":
+    case "wallet_prompt":
+      return {
+        icon: Loader2,
+        className: "text-blue-700 bg-blue-50 border-blue-100",
+      };
+    case "pending":
+      return {
+        icon: Clock3,
+        className: "text-amber-700 bg-amber-50 border-amber-100",
+      };
+    case "confirmed":
+      return {
+        icon: CheckCircle,
+        className: "text-emerald-700 bg-emerald-50 border-emerald-100",
+      };
+    case "failed":
+      return {
+        icon: AlertTriangle,
+        className: "text-red-700 bg-red-50 border-red-100",
+      };
+    default:
+      return null;
+  }
+};
+
 const DonationModal: React.FC = () => {
   const {
     selectedCampaign,
@@ -99,7 +147,6 @@ const DonationModal: React.FC = () => {
     setDonationMessage,
     selectedPayment,
     setSelectedPayment,
-    walletConnected,
     userName,
     setUserName,
   } = useAppContext();
@@ -107,16 +154,76 @@ const DonationModal: React.FC = () => {
   const [donorEmail, setDonorEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [token, setToken] = useState<"ETH" | "USDC" | "USDT">("ETH");
+  const [txState, setTxState] = useState<DonationTxState>("idle");
+  const [txHash, setTxHash] = useState<string>("");
+  const [txError, setTxError] = useState<string>("");
+
   const tokenAddress = useMemo(() => {
     if (token === "USDC") return EVM_USDC_ADDRESS;
     if (token === "USDT") return EVM_USDT_ADDRESS;
-    return "0x0000000000000000000000000000000000000000"; // ETH sentinel
+    return "0x0000000000000000000000000000000000000000";
   }, [token]);
+
   const backendId =
     (selectedCampaign as any)?.backendId || (selectedCampaign as any)?._id;
   const { show: toast } = useToast();
 
+  const persistTxState = async (
+    state: DonationTxState,
+    params?: {
+      txHash?: string;
+      from?: string;
+      amountWei?: string;
+      errorMessage?: string;
+      idempotencyKey?: string;
+    }
+  ) => {
+    if (!backendId || state === "idle") return;
+    try {
+      await upsertCryptoDonationTx({
+        campaignId: String(backendId),
+        chainId: chainIdHexToDecString(EVM_CHAIN_ID_HEX),
+        state,
+        txHash: params?.txHash,
+        from: params?.from,
+        amountWei: params?.amountWei,
+        message: donationMessage || undefined,
+        errorMessage: params?.errorMessage,
+        idempotencyKey: params?.idempotencyKey,
+      });
+    } catch {
+      // best effort only
+    }
+  };
+
+  const chainSwitchConfig = useMemo(() => {
+    const env = (import.meta as any).env || {};
+    const rpcCandidate =
+      EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+        ? env.VITE_RPC_BASE_SEPOLIA
+        : env.VITE_RPC_BASE_MAINNET;
+
+    const rpcUrls = rpcCandidate ? [String(rpcCandidate)] : undefined;
+    const chainName =
+      EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+        ? "Base Sepolia"
+        : "Base";
+    return {
+      chainIdHex: EVM_CHAIN_ID_HEX,
+      rpcUrls,
+      chainName,
+      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      blockExplorerUrls:
+        EVM_CHAIN_ID_HEX.toLowerCase() === "0x14a34"
+          ? ["https://sepolia.basescan.org"]
+          : ["https://basescan.org"],
+    };
+  }, []);
+
   if (!selectedCampaign) return null;
+
+  const stateMeta = txStateMeta(txState);
+  const StateIcon = stateMeta?.icon;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -127,9 +234,11 @@ const DonationModal: React.FC = () => {
             onClick={() => {
               setShowDonationModal(false);
               setSelectedCampaign(null);
+              setTxState("idle");
+              setTxHash("");
+              setTxError("");
               if (window.history && window.history.replaceState) {
-                const cleanUrl =
-                  window.location.origin + window.location.pathname;
+                const cleanUrl = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, "", cleanUrl);
               }
             }}
@@ -140,9 +249,7 @@ const DonationModal: React.FC = () => {
         </div>
 
         <div className="mb-4">
-          <h4 className="font-semibold text-gray-900 mb-2">
-            {selectedCampaign.title}
-          </h4>
+          <h4 className="font-semibold text-gray-900 mb-2">{selectedCampaign.title}</h4>
           <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
             <div
               className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
@@ -152,13 +259,32 @@ const DonationModal: React.FC = () => {
                   selectedCampaign.target_amount
                 )}%`,
               }}
-            ></div>
+            />
           </div>
           <p className="text-sm text-gray-600">
             ${formatAmount(selectedCampaign.raised_amount)} of $
             {formatAmount(selectedCampaign.target_amount)} raised
           </p>
         </div>
+
+        {stateMeta && StateIcon && (
+          <div className={`mb-4 rounded-xl border p-3 ${stateMeta.className}`}>
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <StateIcon
+                className={`h-4 w-4 ${
+                  txState === "initiated" || txState === "wallet_prompt"
+                    ? "animate-spin"
+                    : ""
+                }`}
+              />
+              {donationTxStateLabel(txState)}
+            </div>
+            {txHash && (
+              <p className="text-xs mt-1 break-all">Transaction: {txHash}</p>
+            )}
+            {txError && <p className="text-xs mt-1">{txError}</p>}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
@@ -169,7 +295,7 @@ const DonationModal: React.FC = () => {
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-              placeholder="How should we address you?"
+              placeholder="Anonymous"
             />
           </div>
 
@@ -188,7 +314,7 @@ const DonationModal: React.FC = () => {
               />
               {!backendId && (
                 <p className="text-xs text-red-600 mt-2">
-                  This campaign isn\'t synced with the server yet. Please
+                  This campaign isn't synced with the server yet. Please
                   create/select a server-backed campaign to use card payments.
                 </p>
               )}
@@ -204,9 +330,7 @@ const DonationModal: React.FC = () => {
               value={donationAmount}
               onChange={(e) => setDonationAmount(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-              placeholder={
-                selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"
-              }
+              placeholder={selectedPayment === "crypto" ? "e.g. 0.01" : "Enter amount"}
             />
             {selectedPayment === "crypto" && (
               <div className="mt-2">
@@ -215,7 +339,7 @@ const DonationModal: React.FC = () => {
                 </label>
                 <select
                   value={token}
-                  onChange={(e) => setToken(e.target.value as any)}
+                  onChange={(e) => setToken(e.target.value as "ETH" | "USDC" | "USDT")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="ETH">ETH</option>
@@ -223,8 +347,8 @@ const DonationModal: React.FC = () => {
                   <option value="USDT">USDT</option>
                 </select>
                 <p className="text-[11px] text-gray-500 mt-1">
-                  You will sign a message before the transaction for donation
-                  intent.
+                  Transaction will run through chain checks, wallet signature,
+                  and on-chain confirmation tracking.
                 </p>
               </div>
             )}
@@ -249,13 +373,14 @@ const DonationModal: React.FC = () => {
             </label>
             <PaymentMethodSelector />
             <p className="text-xs text-gray-500 mt-2">
-              Crypto uses your browser wallet (MetaMask or compatible).
-              Card/bank/mobile are simulated for demo purposes.
+              Crypto uses browser wallet. Card/bank/mobile are simulated and
+              still backend-dependent.
             </p>
           </div>
 
           <ActionButton
             submitting={submitting}
+            state={txState}
             disabled={
               !donationAmount ||
               (selectedPayment === "card" && (!donorEmail || !backendId))
@@ -263,12 +388,16 @@ const DonationModal: React.FC = () => {
             onClick={async () => {
               const amountNum = parseFloat(donationAmount || "0");
               if (!selectedCampaign || !amountNum || amountNum <= 0) return;
+
               if (selectedPayment === "card") {
-                // Initialize Paystack and redirect
                 try {
                   setSubmitting(true);
+                  setTxState("initiated");
+                  setTxError("");
                   if (!backendId) {
                     setSubmitting(false);
+                    setTxState("failed");
+                    setTxError("Server-backed campaign required for card flow.");
                     return;
                   }
                   const { initPaystackCard } = await import("../lib/api");
@@ -279,16 +408,15 @@ const DonationModal: React.FC = () => {
                     donorName: userName || undefined,
                     isAnonymous: !userName,
                     message: donationMessage || undefined,
-                    // Optionally set a callback URL; leaving undefined relies on webhook-only confirmation
                   });
                   if (resp?.success && (resp.data as any)?.authorizationUrl) {
                     window.location.href = (resp.data as any).authorizationUrl;
                   } else {
-                    throw new Error(
-                      resp?.message || "Failed to initialize Paystack"
-                    );
+                    throw new Error(resp?.message || "Failed to initialize Paystack");
                   }
                 } catch (e: any) {
+                  setTxState("failed");
+                  setTxError(e?.message || "Failed to start card payment.");
                   toast({
                     type: "error",
                     title: "Payment init failed",
@@ -297,106 +425,171 @@ const DonationModal: React.FC = () => {
                 } finally {
                   setSubmitting(false);
                 }
-              } else {
-                // Crypto flow: sign message then send on-chain via contract (ETH or ERC20)
-                try {
-                  setSubmitting(true);
-                  // Ensure EVM chain
-                  await requireChain(EVM_CHAIN_ID_HEX);
-                  const from = await getSelectedAddress();
-                  if (!from) throw new Error("Connect MetaMask first.");
+                return;
+              }
 
-                  // Sign intent
-                  const signMsg = `I am donating ${donationAmount} ${token} to campaign: ${selectedCampaign.title}`;
-                  await signDonationMessage(signMsg);
+              try {
+                setSubmitting(true);
+                setTxError("");
+                setTxHash("");
+                setTxState("initiated");
+                const donationIdempotencyKey =
+                  typeof crypto !== "undefined" && "randomUUID" in crypto
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                await persistTxState("initiated", {
+                  idempotencyKey: donationIdempotencyKey,
+                });
 
-                  // Validate contract address
-                  const contractAddress = EVM_CONTRACT_ADDRESS;
-                  if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-                    throw new Error("EVM contract address not configured.");
-                  }
+                const eth = (window as any).ethereum;
+                if (!eth) {
+                  throw new Error("No wallet found. Install MetaMask or compatible wallet.");
+                }
 
-                  // Determine on-chain campaign ID (must be numeric, e.g. 1,2,3)
-                  // Prefer the synced backend on-chain linkage at `evm.campaignId`
-                  const rawId =
-                    (selectedCampaign as any).evm?.campaignId ??
-                    (selectedCampaign as any).campaignId ??
-                    null;
-                  const idStr = rawId != null ? String(rawId) : "";
-                  if (!/^\d+$/.test(idStr)) {
-                    throw new Error(
-                      "This campaign is missing a numeric on-chain ID. Please sync it with the backend before donating."
-                    );
-                  }
-
-                  let txHash: string = "";
-                  if (token === "ETH") {
-                    // Native ETH donation
-                    txHash = await contractDonateEth({
-                      contractAddress,
-                      campaignId: idStr,
-                      valueEth: String(donationAmount),
-                    });
-                  } else {
-                    // ERC20 donation path
-                    if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress)) {
-                      throw new Error("Token address not configured.");
-                    }
-                    const { decimals } = await getTokenMeta(tokenAddress);
-                    // parse decimal amount to raw units
-                    const parts = String(donationAmount).split(".");
-                    const whole = parts[0] || "0";
-                    const frac = (parts[1] || "").padEnd(decimals, "0").slice(0, decimals);
-                    const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac || "0");
-
-                    await ensureAllowance(tokenAddress, from, contractAddress, raw);
-                    txHash = await donateErc20({
-                      contractAddress,
-                      campaignId: idStr,
-                      tokenAddress,
-                      amount: raw,
-                    });
-                  }
-
-                  // Record on backend if available
-                  if (backendId) {
-                    const tokenStr = localStorage.getItem("auth_token");
-                    const base = {
-                      campaignId: String(backendId),
-                      amount: amountNum,
-                      paymentMethod: "crypto" as const,
-                      message:
-                        (donationMessage ? donationMessage + " " : "") +
-                        `(tx: ${txHash.slice(0, 10)}..., ${token})`,
-                      isAnonymous: !userName,
-                    };
-                    if (tokenStr) {
-                      await postAuthDonation(base as any, tokenStr);
-                    } else {
-                      await postGuestDonation({
-                        ...base,
-                        donorName: userName || undefined,
-                      } as any);
-                    }
-                  }
-
+                const currentChainId = await eth.request({ method: "eth_chainId" });
+                if (
+                  String(currentChainId).toLowerCase() !==
+                  String(EVM_CHAIN_ID_HEX).toLowerCase()
+                ) {
                   toast({
-                    type: "success",
-                    title: "Donation sent",
-                    description: `Tx: ${txHash.slice(0, 10)}...`,
+                    type: "info",
+                    title: "Switching network",
+                    description: `Switching wallet to required chain (${chainSwitchConfig.chainName}).`,
                   });
-                  // Close modal and reset
+                }
+
+                await requireChain(chainSwitchConfig.chainIdHex, chainSwitchConfig);
+
+                const from = await getSelectedAddress();
+                if (!from) throw new Error("Connect MetaMask first.");
+
+                setTxState("wallet_prompt");
+                await persistTxState("wallet_prompt", {
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
+                const signMsg = `I am donating ${donationAmount} ${token} to campaign: ${selectedCampaign.title}`;
+                await signDonationMessage(signMsg);
+
+                const contractAddress = EVM_CONTRACT_ADDRESS;
+                if (!/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+                  throw new Error("EVM contract address not configured.");
+                }
+
+                const rawId =
+                  (selectedCampaign as any).evm?.campaignId ??
+                  (selectedCampaign as any).campaignId ??
+                  null;
+                const idStr = rawId != null ? String(rawId) : "";
+                if (!/^\d+$/.test(idStr)) {
+                  throw new Error(
+                    "This campaign is missing a numeric on-chain ID. Please sync it with the backend before donating."
+                  );
+                }
+
+                let txHashLocal = "";
+                if (token === "ETH") {
+                  txHashLocal = await contractDonateEth({
+                    contractAddress,
+                    campaignId: idStr,
+                    valueEth: String(donationAmount),
+                  });
+                } else {
+                  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress)) {
+                    throw new Error("Token address not configured.");
+                  }
+                  const { decimals } = await getTokenMeta(tokenAddress);
+                  const parts = String(donationAmount).split(".");
+                  const whole = parts[0] || "0";
+                  const frac = (parts[1] || "")
+                    .padEnd(decimals, "0")
+                    .slice(0, decimals);
+                  const raw =
+                    BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac || "0");
+
+                  await ensureAllowance(tokenAddress, from, contractAddress, raw);
+                  txHashLocal = await donateErc20({
+                    contractAddress,
+                    campaignId: idStr,
+                    tokenAddress,
+                    amount: raw,
+                  });
+                }
+
+                setTxHash(txHashLocal);
+                setTxState("pending");
+                await persistTxState("pending", {
+                  txHash: txHashLocal,
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
+
+                if (backendId) {
+                  try {
+                    await recordCryptoDonation({
+                      campaignId: String(backendId),
+                      txHash: txHashLocal,
+                      amountWei: "0",
+                      chainId: chainIdHexToDecString(EVM_CHAIN_ID_HEX),
+                      from,
+                      message: donationMessage || undefined,
+                    });
+                  } catch {
+                    // best effort only
+                  }
+
+                  const tokenStr = localStorage.getItem("auth_token");
+                  const base = {
+                    campaignId: String(backendId),
+                    amount: amountNum,
+                    paymentMethod: "crypto" as const,
+                    message:
+                      (donationMessage ? donationMessage + " " : "") +
+                      `(tx: ${txHashLocal.slice(0, 10)}..., ${token})`,
+                    isAnonymous: !userName,
+                  };
+                  if (tokenStr) {
+                    await postAuthDonation(base as any, tokenStr);
+                  } else {
+                    await postGuestDonation({
+                      ...base,
+                      donorName: userName || undefined,
+                    } as any);
+                  }
+                }
+
+                setTxState("confirmed");
+                await persistTxState("confirmed", {
+                  txHash: txHashLocal,
+                  from,
+                  idempotencyKey: donationIdempotencyKey,
+                });
+                toast({
+                  type: "success",
+                  title: "Donation sent",
+                  description: `Tx: ${txHashLocal.slice(0, 10)}...`,
+                });
+
+                setTimeout(() => {
                   setShowDonationModal(false);
                   setSelectedCampaign(null);
-                } catch (e: any) {
-                  toast({
-                    type: "error",
-                    title: "Donation failed",
-                    description: e?.message || "Please try again.",
-                  });
-                } finally {
-                  setSubmitting(false);
-                }
+                  setTxState("idle");
+                  setTxHash("");
+                  setTxError("");
+                }, 1200);
+              } catch (e: any) {
+                setTxState("failed");
+                setTxError(e?.message || "Please try again.");
+                await persistTxState("failed", {
+                  errorMessage: e?.message || "Donation failed",
+                });
+                toast({
+                  type: "error",
+                  title: "Donation failed",
+                  description: e?.message || "Please try again.",
+                });
+              } finally {
+                setSubmitting(false);
               }
             }}
           />
@@ -411,15 +604,29 @@ export default DonationModal;
 const ActionButton: React.FC<{
   submitting?: boolean;
   disabled?: boolean;
+  state: DonationTxState;
   onClick: () => void | Promise<void>;
-}> = ({ submitting, disabled, onClick }) => {
+}> = ({ submitting, disabled, onClick, state }) => {
+  const label =
+    state === "wallet_prompt"
+      ? "Awaiting Wallet Signature..."
+      : state === "pending"
+        ? "Waiting for Confirmation..."
+        : state === "confirmed"
+          ? "Donation Confirmed"
+          : state === "failed"
+            ? "Retry Donation"
+            : submitting
+              ? "Processing..."
+              : "Confirm Donation";
+
   return (
     <button
       onClick={onClick}
-      disabled={disabled || submitting}
+      disabled={disabled || submitting || state === "pending"}
       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
     >
-      {submitting ? "Redirecting..." : "Confirm Donation"}
+      {label}
     </button>
   );
 };

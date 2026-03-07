@@ -402,6 +402,69 @@ export async function initPaystackCard(input: {
   );
 }
 
+
+
+export type CampaignUpdateItem = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  content?: string;
+  message?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  author?: { _id?: string; name?: string } | null;
+  authorName?: string;
+  moderationStatus?: string;
+};
+
+export async function getCampaignUpdates(
+  campaignId: string,
+  page = 1,
+  limit = 20
+) {
+  const q = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  }).toString();
+  return apiFetch<{ updates: CampaignUpdateItem[]; pagination?: any }>(
+    `/campaigns/${encodeURIComponent(campaignId)}/updates?${q}`
+  );
+}
+
+export async function createCampaignUpdate(
+  campaignId: string,
+  input: { title: string; content: string },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ update: CampaignUpdateItem }>(
+    `/campaigns/${encodeURIComponent(campaignId)}/updates`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function patchCampaignLifecycle(
+  campaignId: string,
+  input: {
+    isActive?: boolean;
+    isArchived?: boolean;
+    moderationReason?: string;
+    lifecycleStatus?: string;
+  },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ campaign: any }>(`/campaigns/${encodeURIComponent(campaignId)}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Comments ----------
 export async function createComment(
   campaignId: string,
@@ -416,9 +479,54 @@ export async function createComment(
   });
 }
 
+
+
+export async function reportCampaignComment(
+  campaignId: string,
+  commentId: string,
+  input: { reason: string; details?: string },
+  token: string
+) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ report: any }>(
+    `/comments/campaign/${encodeURIComponent(campaignId)}/${encodeURIComponent(commentId)}/report`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function reportCampaign(campaignId: string, input: { reason: string; details?: string }, token: string) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+  return apiFetch<{ report: any }>(`/campaigns/${encodeURIComponent(campaignId)}/report`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- User / Account helpers ----------
 export async function getMe() {
   return apiFetch<{ user: any }>(`/auth/me`, { method: "GET" });
+}
+
+export async function refreshSession() {
+  return apiFetch<AuthPayload>(`/auth/refresh`, { method: "POST" });
+}
+
+export async function logAuthEvent(input: {
+  event: string;
+  provider?: string;
+  success: boolean;
+  message?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  return apiFetch<{ logged?: boolean }>(`/auth/audit`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getUserDashboard() {
@@ -461,6 +569,21 @@ export function disconnectGoogle() {
   });
 }
 
+
+export async function verifyPrivyAuth(input: {
+  sub?: string;
+  userId?: string;
+  email?: string;
+  name?: string;
+  provider?: string;
+  token?: string;
+}) {
+  return apiFetch<AuthPayload>(`/auth/privy/verify`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Wallet Auth (EVM) ----------
 // These endpoints may not exist on the backend yet. We call them optimistically and surface errors.
 export async function requestWalletNonce(address: string) {
@@ -494,6 +617,43 @@ export async function recordCryptoDonation(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export type CryptoDonationLifecycleState =
+  | "initiated"
+  | "wallet_prompt"
+  | "pending"
+  | "confirmed"
+  | "failed";
+
+type UpsertCryptoDonationTxInput = {
+  campaignId: string;
+  chainId: string;
+  state: CryptoDonationLifecycleState;
+  txHash?: string;
+  amountWei?: string;
+  from?: string;
+  message?: string;
+  idempotencyKey?: string;
+  errorMessage?: string;
+};
+
+/**
+ * Best-effort lifecycle persistence for crypto donations.
+ * Backends may implement either `/donations/crypto/tx` or `/donations/crypto` upsert semantics.
+ */
+export async function upsertCryptoDonationTx(input: UpsertCryptoDonationTxInput) {
+  try {
+    return await apiFetch<{ donation?: any }>(`/donations/crypto/tx`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return apiFetch<{ donation?: any }>(`/donations/crypto`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
 }
 
 // ---------- Admin (Basic Auth) ----------
@@ -539,4 +699,37 @@ export async function adminUnlockUser(id: string, auth: BasicAuth) {
 }
 export async function adminDeleteUser(id: string, auth: BasicAuth) {
   return apiFetch<{}>(`/admin/users/${id}`, withBasic({ method: "DELETE" }, auth.basicToken));
+}
+
+
+export async function adminListReports(
+  params: { page?: number; limit?: number; status?: string },
+  auth: BasicAuth
+) {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.status) q.set("status", params.status);
+  const path = `/admin/reports${q.toString() ? `?${q.toString()}` : ""}`;
+  return apiFetch<{ reports: any[]; pagination?: any }>(
+    path,
+    withBasic(undefined, auth.basicToken)
+  );
+}
+
+export async function adminResolveReport(
+  reportId: string,
+  input: { status: "resolved" | "rejected"; resolutionNote?: string },
+  auth: BasicAuth
+) {
+  return apiFetch<{ report: any }>(
+    `/admin/reports/${encodeURIComponent(reportId)}`,
+    withBasic(
+      {
+        method: "PUT",
+        body: JSON.stringify(input),
+      },
+      auth.basicToken
+    )
+  );
 }
