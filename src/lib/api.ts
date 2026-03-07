@@ -569,6 +569,21 @@ export function disconnectGoogle() {
   });
 }
 
+
+export async function verifyPrivyAuth(input: {
+  sub?: string;
+  userId?: string;
+  email?: string;
+  name?: string;
+  provider?: string;
+  token?: string;
+}) {
+  return apiFetch<AuthPayload>(`/auth/privy/verify`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 // ---------- Wallet Auth (EVM) ----------
 // These endpoints may not exist on the backend yet. We call them optimistically and surface errors.
 export async function requestWalletNonce(address: string) {
